@@ -38,6 +38,12 @@ export default async function AdminPage() {
           ))}
         </div>
 
+        <div className="mt-8 flex gap-4">
+          <Link href="/admin/refunds" className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-navy ring-1 ring-gray-200 hover:bg-gray-50">
+            Refunds
+          </Link>
+        </div>
+
         <div className="mt-8 rounded-2xl bg-white p-6 shadow-sm">
           <h2 className="text-lg font-semibold text-navy">Pending partner approvals</h2>
           {pendingPartners.length === 0 ? (
