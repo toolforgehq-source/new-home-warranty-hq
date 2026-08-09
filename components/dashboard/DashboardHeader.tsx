@@ -27,6 +27,7 @@ export function DashboardHeader({
             <Link href="/dashboard" className="hover:text-green">Dashboard</Link>
             <Link href="/dashboard/issues" className="hover:text-green">Issues</Link>
             <Link href="/dashboard/documents" className="hover:text-green">Documents</Link>
+            <Link href="/dashboard/reminders" className="hover:text-green">Reminders</Link>
             {user.role === "ADMIN" && (
               <Link href="/admin" className="hover:text-green">Admin</Link>
             )}
