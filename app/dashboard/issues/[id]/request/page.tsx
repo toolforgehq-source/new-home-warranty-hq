@@ -95,6 +95,14 @@ export default function RequestPage({
                 >
                   Copy to clipboard
                 </button>
+                <a
+                  href={`/api/reports/request/${request.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-full bg-white px-6 py-3 font-semibold text-navy ring-1 ring-gray-200 hover:bg-gray-50"
+                >
+                  Download PDF
+                </a>
                 <div className="w-full rounded-lg bg-gray-50 p-4 text-sm text-gray-600">
                   <p className="font-semibold text-navy">Portal mode</p>
                   <p>Copy these fields if your builder requires an online submission:</p>

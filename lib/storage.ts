@@ -1,3 +1,4 @@
+import { Readable } from "node:stream";
 import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
@@ -35,6 +36,19 @@ export async function uploadFile(file: File, key: string) {
   );
 }
 
+export async function uploadBuffer(key: string, buffer: Buffer, contentType: string) {
+  if (!client) throw new Error("Storage is not configured");
+
+  await client.send(
+    new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      Body: buffer,
+      ContentType: contentType,
+    })
+  );
+}
+
 export async function getSignedDownloadUrl(key: string, expiresInSeconds = 60 * 60) {
   if (!client) throw new Error("Storage is not configured");
 
@@ -43,6 +57,26 @@ export async function getSignedDownloadUrl(key: string, expiresInSeconds = 60 * 
     new GetObjectCommand({ Bucket: bucket, Key: key }),
     { expiresIn: expiresInSeconds }
   );
+}
+
+export async function downloadFile(key: string) {
+  if (!client) throw new Error("Storage is not configured");
+
+  const response = await client.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
+  const body = response.Body;
+  if (!body) throw new Error("Empty response from storage");
+
+  if (body instanceof Readable) {
+    return new Promise<Buffer>((resolve, reject) => {
+      const chunks: Buffer[] = [];
+      body.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
+      body.on("end", () => resolve(Buffer.concat(chunks)));
+      body.on("error", reject);
+    });
+  }
+
+  const arrayBuffer = await new Response(body as ReadableStream).arrayBuffer();
+  return Buffer.from(arrayBuffer);
 }
 
 export function getPublicUrl(key: string) {
