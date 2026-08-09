@@ -2,18 +2,20 @@
 
 This document is the source-of-truth technical plan for the approved product scope. It does not change business model, pricing, or UX decisions from the master specification.
 
+> **Corrections applied**: The approved 10 technical corrections from the review are implemented in the repository code and in the validated Prisma schema at `prisma/schema.prisma`. The schema block below is retained for reference but should not be treated as the live source of truth for the database.
+
 ---
 
 ## 1. Final Recommended Tech Stack & Reasoning
 
 | Layer | Choice | Reasoning |
 |-------|--------|-----------|
-| Framework | **Next.js 15 (App Router)** | Server components for marketing pages, API routes in one codebase, excellent Vercel support, strong TypeScript. |
+| Framework | **Next.js 16 Active LTS (App Router)** | Server components for marketing pages, API routes in one codebase, excellent Vercel support, strong TypeScript. |
 | Language | **TypeScript 5** | Type safety across full stack; required for maintainability at this scope. |
 | Styling | **Tailwind CSS + shadcn/ui** | Rapid, consistent UI with accessible primitives. shadcn/ui gives unstyled, copy-paste components we can brand. |
 | Database | **PostgreSQL on Neon** | Managed Postgres with branching, PITR, good free tier, serverless connection pooling. |
-| ORM | **Prisma** | Mature relational modeling, migrations, type-safe queries, works well on Vercel with `driverAdapters`. |
-| Auth | **Auth.js v5 (NextAuth) + Credentials provider** | Email/password built-in, sessions, password-reset, email verification all achievable with one library. |
+| ORM | **Prisma** | Mature relational modeling, migrations, type-safe queries, works well on Vercel. |
+| Auth | **Better Auth + `better-auth/adapters/prisma`** | Database-backed sessions, email/password, email verification, password reset, and secure session revocation. |
 | Payments | **Stripe Checkout + Stripe Webhooks** | One-time payments, receipt emails, refunds, webhook idempotency all handled. |
 | Object Storage | **Cloudflare R2** (S3-compatible) | No egress fees, signed URLs, private buckets, lower cost than S3 for file previews and exports. |
 | Email | **Resend + React Email** | Reliable transactional email, clean React-based templates, good free tier. |
@@ -35,6 +37,8 @@ This document is the source-of-truth technical plan for the approved product sco
 ---
 
 ## 2. Full Database Schema (Prisma)
+
+> The **validated, corrected schema** is in `prisma/schema.prisma` in this repository. The block below is the original plan and should be compared against the live file.
 
 ```prisma
 generator client {
@@ -682,12 +686,18 @@ model PartnerRecommendationVisit {
 ```
 
 ### Key schema decisions
-- `Home` has a single `primaryOwner` plus `HomeMembership` for co-owners.
-- `Purchase` records every Stripe transaction. `GiftPurchase` adds gift-specific metadata. `HomeEntitlement` is the license.
+- `Home` uses `primaryOwnerId` as the source-of-truth primary owner; `HomeMembership` is for co-owners only.
+- Authorization helpers recognize both `Home.primaryOwnerId` and `HomeMembership`.
+- `Purchase` is created as `PENDING` before Stripe and marked `SUCCEEDED` by webhook. `OnboardingToken` links the purchase to account creation. `Home` + `HomeEntitlement` are created only during onboarding after the home is supplied.
+- `GiftPurchase` follows the same pattern: `PENDING` record before checkout, `SUCCEEDED` on webhook, redeemed later.
 - `WarrantyRequest` can be issue-specific (`type = ISSUE`) or a missing-doc request (`type = WARRANTY_DOCUMENT`).
 - `Document` is the single source for all files, referenced by `fileKey` (R2/S3 key).
-- `Reminder` table drives the email/SMS reminder engine.
+- Submission attachments and repair photos are relational (`SubmissionAttachment`, `RepairVerificationPhoto`), not plain arrays.
+- `ConnectedEmailAccount` supports homeowner-origin builder email via Gmail or Microsoft/Outlook OAuth.
+- `Submission` captures method, destination, confirmation, and attachments with proof-of-submission records.
+- `Reminder` table drives the email/SMS reminder engine; hourly delivery uses a `CRON_SECRET`-guarded Vercel Cron and an idempotency key.
 - `AuditLog` captures admin and sensitive actions.
+- Admin permissions are granular: `VIEW_HOMES` does **not** grant `VIEW_ISSUES` or `VIEW_DOCUMENTS`.
 
 ---
 
@@ -851,23 +861,27 @@ async function requireAdminPermission(session: Session, permission: AdminPermiss
 ## 5. Homeowner Purchase Flow
 
 1. Visitor clicks **Protect My Home — $189**.
-2. Frontend POSTs `/api/checkout` with `product=homeowner` and optional `email` (if known).
+2. Frontend POSTs `/api/checkout` with `product=homeowner` and optional email.
 3. Server:
-   - If logged in: uses existing `userId` and email.
-   - If anonymous: creates an `OnboardingToken` (pending) for the email.
-   - Creates a Stripe Checkout Session with `price = STRIPE_PRICE_HOMEOWNER`, `client_reference_id = onboardingToken.id` or `userId`.
+   - If logged in: uses existing `userId`.
+   - If anonymous: no account exists yet; the checkout record is created without an entitlement.
+   - Creates a `Purchase` record in `PENDING` status.
+   - Creates a Stripe Checkout Session with `price = STRIPE_PRICE_HOMEOWNER`, `client_reference_id = purchase.id`.
+   - Stripe Checkout collects the buyer email.
    - Returns `checkoutUrl`.
 4. User completes payment on Stripe.
-5. Stripe redirects to `/onboarding?token=...` (or `/dashboard` if logged in and home exists).
+5. Stripe redirects to `/onboarding?token=...` (or `/dashboard` if already authenticated).
 6. Stripe webhook `checkout.session.completed` fires:
-   - If `client_reference_id` is a user: create `Purchase` and `HomeEntitlement` (home may be created during onboarding).
-   - If `client_reference_id` is an `OnboardingToken`: create `Purchase` with `purchaserEmail` from token, status `SUCCEEDED`.
-   - Send receipt email via Resend.
+   - Marks `Purchase` as `SUCCEEDED`.
+   - Creates/links a secure `OnboardingToken` to the `Purchase`.
+   - `Home` and `HomeEntitlement` are **not** created yet.
+   - Sends receipt email via Resend.
 7. On `/onboarding`:
-   - Validate token (not expired, not used).
+   - Validate token (not expired, not used) and read purchase email from Stripe/record.
    - User sets name, password, property address, closing date, builder name.
-   - Server creates `User`, `Home`, `HomeEntitlement`, marks `OnboardingToken.usedAt`.
-   - Auth.js signs the user in.
+   - Server creates `User`, `Home` (with `primaryOwnerId`), and `HomeEntitlement` linked to the `Purchase`.
+   - Marks `OnboardingToken.usedAt`.
+   - Better Auth creates a session.
    - Redirect to `/dashboard` with generated **Warranty Action Plan**.
 8. Dashboard immediately shows:
    - Property address, closing date, days since closing.
@@ -876,39 +890,41 @@ async function requireAdminPermission(session: Session, permission: AdminPermiss
    - CTA to upload warranty documents.
 
 ### Edge cases
-- Duplicate checkout: use Stripe `client_reference_id` uniqueness and `Purchase.stripeCheckoutSessionId` unique.
-- Token expired: show "Resend onboarding link" that verifies purchase and creates a new token.
-- Existing user buys a second home: create new `Home` + `HomeEntitlement`, skip onboarding password step.
+- Duplicate checkout: unique `Purchase` per Stripe Checkout Session; idempotent webhook handling.
+- Token expired: show "Resend onboarding link" that verifies the purchase and creates a new token.
+- Existing user buys a second home: create new `Home` + `HomeEntitlement` linked to the new `Purchase`; skip password step.
 
 ---
 
 ## 6. Partner Gift & Redemption Flow
 
-1. Partner signs up or logs in. Partners can self-register and are approved by an admin (or auto-approved after email verification).
+1. Partner signs up or logs in. Partners can self-register but require admin `MANAGE_PARTNERS` approval before their public co-branded page/logo becomes active (`isApproved`).
 2. Partner completes `/partner/profile` (type, company, slug, logo).
 3. On `/partner/gift`, partner enters:
    - Buyer name, buyer email, property address (optional), gift message.
 4. Frontend POSTs `/api/checkout` with `product=gift` + recipient details.
 5. Server:
-   - Creates a `GiftPurchase` (status pending) with `redemptionToken`.
+   - Creates a `Purchase` record in `PENDING` status (productType=GIFT, userId=partnerId).
+   - Creates a `GiftPurchase` record in `PENDING` status with `redemptionToken`, linked to the `Purchase`.
    - Creates Stripe Checkout Session with `price = STRIPE_PRICE_GIFT`, `client_reference_id = giftPurchase.id`, `metadata` includes partnerId.
    - Returns `checkoutUrl`.
 6. Partner pays $124 on Stripe.
 7. Webhook `checkout.session.completed`:
-   - Finds `GiftPurchase` by `client_reference_id`.
-   - Creates `Purchase` (productType=GIFT, userId=partnerId), links to `GiftPurchase.purchaseId`.
+   - Marks `Purchase` and `GiftPurchase` as `SUCCEEDED`.
+   - Creates an `OnboardingToken` linked to the `GiftPurchase`/`Purchase`.
    - Sends branded gift email to `recipientEmail` with `/gift/[redemptionToken]`.
 8. Recipient clicks `/gift/[token]`:
    - If no account: register with email and password.
    - If account exists: log in.
-   - Redemption marks `GiftPurchase.redeemedAt` and `redeemedByUserId`, creates `Home` (using property address if provided) and `HomeEntitlement`.
+   - Redemption creates `User`, `Home` (with `primaryOwnerId`), and `HomeEntitlement` linked to the `Purchase`.
+   - Marks `GiftPurchase.redeemedAt` and `redeemedByUserId`.
 9. Partner dashboard shows:
    - Gift sent: `createdAt`
    - Gift redeemed: `redeemedAt` (boolean only).
    - No issue, document, or builder details.
 
 ### Co-branding
-- Partner slug page `/[partnerSlug]` shows partner name/logo and primary site CTA.
+- Partner slug page `/[partnerSlug]` shows partner name/logo and primary site CTA only after admin approval.
 - Gift email and redemption page show "Gifted by [Partner]".
 - Homeowner dashboard can show a subtle "Gifted by" module using `Home.partnerGift`.
 - Builder-facing request letters and issue exports never show partner branding.
@@ -923,7 +939,7 @@ async function requireAdminPermission(session: Session, permission: AdminPermiss
   - `STRIPE_PRICE_GIFT` = $124.00
 - One **Product** per price, or two Products.
 - Checkout mode = `payment` (one-time).
-- `automatic_tax` off at launch.
+- `automatic_tax` is configurable via `STRIPE_TAX_BEHAVIOR` (default `exclusive`; set to `automatic_tax` when Stripe Tax is enabled).
 - Collect email on Checkout.
 
 ### Checkout creation
@@ -933,9 +949,10 @@ const session = await stripe.checkout.sessions.create({
   mode: 'payment',
   success_url: `${APP_URL}/onboarding?token=${onboardingToken.token}`,
   cancel_url: `${APP_URL}/pricing`,
-  client_reference_id: onboardingToken.id,
+  client_reference_id: purchase.id,
   customer_email: email || undefined,
-  metadata: { productType },
+  automatic_tax: STRIPE_TAX_BEHAVIOR === 'automatic_tax' ? { enabled: true } : undefined,
+  metadata: { productType, purchaseId: purchase.id },
 });
 ```
 
@@ -960,23 +977,21 @@ const session = await stripe.checkout.sessions.create({
 
 ## 8. Authentication Flow
 
-- **Auth.js v5** configured with `CredentialsProvider`.
-- `authorize(credentials)`:
-  - Find user by email.
-  - Compare `bcryptjs` hash of provided password.
-  - Return user object (id, email, name, role, permissions).
-- `session` strategy: `database` (uses `Session` table) for revocation and security.
+- **Better Auth** with the Prisma adapter (`better-auth/adapters/prisma`).
+- Route handler at `/api/auth/[...all]` handles all auth endpoints.
+- **Email/password:** enabled with `requireEmailVerification` configurable per environment.
+- **Database sessions:** sessions are stored in the `Session` table and can be revoked by deleting the row.
+- **Additional user fields:** `role`, `status`, `permissions`, `phone`, `smsOptIn`, `smsConsentAt`, `onboardingCompletedAt` are declared via `additionalFields` and inferred on both client and server.
 - **Registration:**
-  - Public registration only via onboarding token or gift redemption.
+  - Public registration via onboarding token or gift redemption.
   - Direct `/auth/register` is intentionally not linked for homeowner purchase flow (guest checkout first), but may exist for admin/partner accounts.
 - **Email verification:**
-  - On user creation, send a `VerificationToken` link.
-  - Clicking `/auth/verify?token=...` sets `User.emailVerified`.
+  - Better Auth generates a verification URL; `sendVerificationEmail` dispatches via Resend.
+  - Clicking the verification link sets `User.emailVerified`.
 - **Password reset:**
-  - `/auth/forgot-password` sends `PasswordResetToken`.
-  - `/auth/reset-password?token=...` updates `passwordHash`.
+  - Better Auth password-reset flow; `sendResetPassword` dispatches the reset URL via Resend.
 - **Co-owner invitation:**
-  - Existing user can invite by email.
+  - Primary owner invites by email.
   - `HomeInvitation` token sent.
   - Accepting creates `HomeMembership` with role `COOWNER`.
 
@@ -1059,20 +1074,27 @@ interface Session {
 ## 11. Email & Reminder Architecture
 
 ### Email
-- **Resend** for all transactional email.
-- **React Email** templates in `src/emails/`:
+- **Resend** for all product-generated transactional email:
   - `AccountConfirmation`, `Welcome`, `GiftInvitation`, `GiftRedemption`, `DocumentReminder`, `IssueSubmissionReminder`, `AppointmentReminder`, `RepairVerification`, `WarrantyReview`, `PasswordReset`, `PartnerGiftConfirmation`, `RefundConfirmation`.
 - **From address** `support@newhomewarrantyhq.com` (domain must be verified with SPF/DKIM/DMARC).
+- **Builder-facing warranty requests** originate from the homeowner whenever possible:
+  1. Homeowner creates and approves the request in-app.
+  2. Offer **Send from my email** using a connected Gmail or Microsoft/Outlook account (`ConnectedEmailAccount`) so the message is sent from the homeowner’s mailbox.
+  3. If no connected account, offer **Open in my email app** with a prefilled subject/body plus the PDF/attachments.
+  4. If the builder requires a portal, use **Portal Mode** with copy-ready fields and capture a submission confirmation screenshot.
+  5. NHWHQ email addresses are only used for product-generated communications (reminders, gift invitations, account emails, receipts, support).
 
 ### Reminder engine
 - `Reminder` table stores all pending reminders.
-- Vercel Cron triggers `GET /api/cron/reminders` every hour.
+- Vercel Cron triggers `GET /api/cron/reminders` every hour in production.
+- The cron endpoint requires `CRON_SECRET` in the `Authorization` header.
+- Idempotency: each `Reminder` row has a unique `idempotencyKey` (or uses its own `id`); deliveries use an `upsert`/`WHERE NOT SENT` guard so retries cannot create duplicate messages.
 - Cron handler:
   1. Queries `Reminder` where `dueDate <= now()` and `status = PENDING`.
   2. Groups by `userId` and `channel`.
   3. If digest enabled and user has multiple reminders, sends one digest email.
   4. Otherwise sends individual emails/SMS.
-  5. Marks `Reminder.status = SENT`.
+  5. Marks `Reminder.status = SENT` and records `sentAt`.
 
 ### Reminder creation rules
 | Trigger | Reminder type | Due |
@@ -1429,19 +1451,19 @@ SEED_ADMIN_PASSWORD_HASH=
 | **Vercel function cold starts + Prisma** can be slow. | First request latency. | Use Prisma `driverAdapters` + Neon serverless driver; keep queries lean. |
 | **Hourly cron may not scale** to thousands of reminders. | Missed reminders or timeouts. | Index `Reminder(dueDate, status)`, batch sends, upgrade to Inngest/QStash if needed. |
 | **File upload security** (malware, abuse). | Storage abuse or malicious files. | Presigned URLs, type/size limits, rate limiting; active malware scanning deferred post-launch. |
-| **Auth.js v5 is still relatively new** | Breaking API changes. | Pin exact version, monitor release notes, keep auth code isolated. |
+| **Better Auth + Prisma adapter** | Schema mismatch or adapter bugs. | Validate schema with `prisma validate`, pin version, keep auth code isolated in `lib/auth.ts`. |
 | **SMS compliance** (TCPA) | Legal risk if launched incorrectly. | Keep SMS optional at launch; only enable with explicit opt-in, STOP/HELP handling, and Twilio webhook. |
 | **Realistic timeline without over-promising** | Warranty dates must be labeled correctly. | Compute only `Recommended Review Date` or `Estimated` unless verified by uploaded builder documents. |
 
 ---
 
-## 23. Open Decisions for Approval
+## 23. Locked Decisions
 
-1. **Co-owner permissions:** Should co-owners be able to delete their own issues? Recommended: yes (their own), but not home or partner data.
-2. **Partner approval:** Auto-approve partners on email verification, or require admin approval? Recommended: auto-approve to reduce friction, admin can disable.
-3. **Homeowner purchase flow:** Allow guest checkout with onboarding token (recommended for conversion) or require account creation before checkout? Recommended: guest checkout per master spec.
-4. **Export async:** Should full ZIP export be generated synchronously or via async job + email? Recommended: async for large homes.
-5. **Native app launch exclusion:** Confirmed not building iOS/Android apps.
+1. **Co-owner delete rights:** A co-owner may delete an issue they personally created only while it has never been submitted. Once a `Submission` record exists, the issue is preserved; allow archive or correction instead of hard deletion.
+2. **Partner approval:** Admin approval (`MANAGE_PARTNERS`) is required before a partner’s public co-branded page/logo becomes active.
+3. **Homeowner purchase flow:** Guest checkout is enabled. A `Purchase` record is created before Stripe, the webhook creates an `OnboardingToken`, and `Home` + `HomeEntitlement` are created only during onboarding.
+4. **Full ZIP export:** Asynchronous job + email when ready. Small/request PDFs remain synchronous.
+5. **Native apps:** No iOS/Android apps at launch.
 
 ---
 
