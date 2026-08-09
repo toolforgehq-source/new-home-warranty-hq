@@ -23,15 +23,15 @@ export async function sendGiftInvitation({
 
 export async function sendGiftRedemptionConfirmation({
   to,
-  buyerEmail,
+  recipientEmail,
 }: {
   to: string;
-  buyerEmail: string;
+  recipientEmail: string;
 }) {
   return sendEmail({
     to,
     subject: "Your gift has been redeemed",
-    text: `Hi,\n\nGood news — the New Home Warranty HQ gift you sent to ${to} has been redeemed.\n\n— New Home Warranty HQ`,
-    html: `<p>Hi,</p><p>Good news — the New Home Warranty HQ gift you sent has been redeemed.</p><p>— New Home Warranty HQ</p>`,
+    text: `Hi,\n\nGood news — the New Home Warranty HQ gift you sent to ${recipientEmail} has been redeemed.\n\n— New Home Warranty HQ`,
+    html: `<p>Hi,</p><p>Good news — the New Home Warranty HQ gift you sent to ${recipientEmail} has been redeemed.</p><p>— New Home Warranty HQ</p>`,
   });
 }

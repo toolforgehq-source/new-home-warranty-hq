@@ -34,6 +34,7 @@ export async function processRefund(
       await stripe.refunds.create({
         payment_intent: purchase.stripePaymentIntentId,
         reason: "requested_by_customer",
+        metadata: { reason: reason || "" },
       });
     } catch (err) {
       console.error("[refund] Stripe refund failed", err);
