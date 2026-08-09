@@ -11,7 +11,11 @@ export async function proxy(request: NextRequest) {
     pathname === route || pathname.startsWith(`${route}/`)
   );
 
-  if (!isProtected) {
+  const isPublic =
+    pathname === "/partner/register" ||
+    pathname.startsWith("/partners/");
+
+  if (!isProtected || isPublic) {
     return NextResponse.next();
   }
 

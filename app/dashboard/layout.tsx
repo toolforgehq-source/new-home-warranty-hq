@@ -16,7 +16,9 @@ export default async function DashboardLayout({
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <DashboardHeader user={session.user as { name?: string | null; email?: string | null }} />
+      <DashboardHeader
+        user={session.user as { name?: string | null; email?: string | null; role?: string | null }}
+      />
       {children}
     </div>
   );

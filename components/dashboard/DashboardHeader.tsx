@@ -7,7 +7,7 @@ import { authClient } from "@/lib/auth-client";
 export function DashboardHeader({
   user,
 }: {
-  user: { name?: string | null; email?: string | null };
+  user: { name?: string | null; email?: string | null; role?: string | null };
 }) {
   const router = useRouter();
 
@@ -27,6 +27,9 @@ export function DashboardHeader({
             <Link href="/dashboard" className="hover:text-green">Dashboard</Link>
             <Link href="/dashboard/issues" className="hover:text-green">Issues</Link>
             <Link href="/dashboard/documents" className="hover:text-green">Documents</Link>
+            {user.role === "ADMIN" && (
+              <Link href="/admin" className="hover:text-green">Admin</Link>
+            )}
           </nav>
           <div className="flex items-center gap-3">
             <span className="hidden text-sm text-gray-600 sm:inline">{user.name || user.email}</span>
