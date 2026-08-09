@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { sendWelcomeEmail } from "@/lib/emails/welcome";
 
 export async function completeOnboarding(
   _prevState: { error?: string } | null,
@@ -102,7 +103,23 @@ export async function completeOnboarding(
         where: { id: user.id },
         data: { onboardingCompletedAt: new Date() },
       });
+
+      await tx.reminderSetting.upsert({
+        where: { userId: user.id },
+        create: {
+          userId: user.id,
+          emailEnabled: true,
+          smsEnabled: false,
+          digestEnabled: true,
+        },
+        update: {},
+      });
     });
+
+    const home = await prisma.home.findFirst({ where: { primaryOwnerId: user.id }, orderBy: { createdAt: "desc" } });
+    if (home) {
+      await sendWelcomeEmail({ to: token.email, name, address: home.address });
+    }
   } catch (err) {
     console.error("[onboarding error]", err);
     return { error: "Could not create your account. The email may already be in use." };

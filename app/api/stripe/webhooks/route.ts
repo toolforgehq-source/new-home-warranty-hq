@@ -3,6 +3,10 @@ import { randomUUID } from "crypto";
 import Stripe from "stripe";
 import { stripe } from "@/lib/stripe";
 import prisma from "@/lib/prisma";
+import { sendHomeownerOnboardingLink, sendPurchaseReceipt } from "@/lib/emails/purchase";
+import { sendGiftInvitation } from "@/lib/emails/gift";
+
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
 export async function POST(request: NextRequest) {
   const payload = await request.text();
@@ -44,7 +48,7 @@ export async function POST(request: NextRequest) {
           session.customer_email ||
           (session.customer_details?.email ?? "");
 
-        await prisma.$transaction(async (tx) => {
+        const onboardingToken = await prisma.$transaction(async (tx) => {
           await tx.purchase.update({
             where: { id: purchase.id },
             data: {
@@ -54,7 +58,7 @@ export async function POST(request: NextRequest) {
             },
           });
 
-          await tx.onboardingToken.create({
+          return tx.onboardingToken.create({
             data: {
               purchaseId: purchase.id,
               token: randomUUID(),
@@ -62,6 +66,18 @@ export async function POST(request: NextRequest) {
               expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
             },
           });
+        });
+
+        await sendPurchaseReceipt({
+          to: email,
+          amount: purchase.amount,
+          product: "New Home Warranty HQ",
+        });
+
+        await sendHomeownerOnboardingLink({
+          to: email,
+          token: onboardingToken.token,
+          appUrl: APP_URL,
         });
       }
 
@@ -73,14 +89,14 @@ export async function POST(request: NextRequest) {
 
         const giftPurchase = await prisma.giftPurchase.findUnique({
           where: { id: giftPurchaseId },
-          include: { purchase: true },
+          include: { purchase: true, partner: true },
         });
 
         if (!giftPurchase || giftPurchase.status !== "PENDING") {
           return NextResponse.json({ received: true }, { status: 200 });
         }
 
-        await prisma.$transaction(async (tx) => {
+        const onboardingToken = await prisma.$transaction(async (tx) => {
           await tx.purchase.update({
             where: { id: giftPurchase.purchaseId },
             data: {
@@ -95,7 +111,7 @@ export async function POST(request: NextRequest) {
             data: { status: "PAID" },
           });
 
-          await tx.onboardingToken.create({
+          return tx.onboardingToken.create({
             data: {
               purchaseId: giftPurchase.purchaseId,
               giftPurchaseId: giftPurchase.id,
@@ -104,6 +120,13 @@ export async function POST(request: NextRequest) {
               expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
             },
           });
+        });
+
+        await sendGiftInvitation({
+          to: giftPurchase.recipientEmail,
+          buyerName: giftPurchase.partner.name,
+          buyerCompany: null,
+          redemptionUrl: `${APP_URL}/onboarding?token=${onboardingToken.token}`,
         });
       }
     }

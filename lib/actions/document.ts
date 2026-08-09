@@ -33,6 +33,24 @@ export async function uploadDocument(
     return { error: "File and label are required" };
   }
 
+  const maxSize = 10 * 1024 * 1024;
+  if (file.size > maxSize) {
+    return { error: "File must be smaller than 10 MB" };
+  }
+
+  const allowedTypes = [
+    "application/pdf",
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "text/plain",
+  ];
+  if (!allowedTypes.includes(file.type)) {
+    return { error: "Unsupported file type. Please upload PDF, image, Word, or text files." };
+  }
+
   const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
   const key = `documents/${home.id}/${Date.now()}-${safeName}`;
 
