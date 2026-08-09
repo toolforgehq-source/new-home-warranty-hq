@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { SubmissionMethod } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { trackEvent } from "@/lib/analytics";
+import { logAudit } from "@/lib/audit";
 
 export async function createSubmissionRecord(
   _prevState: { error?: string } | null,
@@ -71,6 +73,9 @@ export async function createSubmissionRecord(
       });
     }
   });
+
+  await trackEvent({ event: "submission_recorded", userId: session.user.id, properties: { issueId, method } });
+  await logAudit({ actorId: session.user.id, action: "SUBMISSION_RECORDED", entityType: "Issue", entityId: issueId });
 
   redirect(`/dashboard/issues/${issueId}`);
 }

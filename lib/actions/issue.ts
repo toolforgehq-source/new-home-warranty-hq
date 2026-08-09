@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { IssueCategory } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { trackEvent } from "@/lib/analytics";
+import { logAudit } from "@/lib/audit";
 
 export async function createIssue(_prevState: { error?: string } | null, formData: FormData) {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -64,6 +66,9 @@ export async function createIssue(_prevState: { error?: string } | null, formDat
       note: "Issue created",
     },
   });
+
+  await trackEvent({ event: "issue_created", userId: session.user.id, properties: { homeId: home.id, category } });
+  await logAudit({ actorId: session.user.id, action: "ISSUE_CREATED", entityType: "Issue", entityId: issue.id });
 
   redirect(`/dashboard/issues/${issue.id}`);
 }

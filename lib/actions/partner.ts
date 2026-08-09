@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { PartnerType } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { trackEvent } from "@/lib/analytics";
+import { logAudit } from "@/lib/audit";
 
 function slugify(input: string) {
   return input
@@ -46,13 +48,13 @@ export async function registerPartner(
 
     const user = result.user as { id: string };
 
-    await prisma.$transaction(async (tx) => {
+    const profile = await prisma.$transaction(async (tx) => {
       await tx.user.update({
         where: { id: user.id },
         data: { role: "PARTNER" },
       });
 
-      await tx.partnerProfile.create({
+      return tx.partnerProfile.create({
         data: {
           userId: user.id,
           partnerType: partnerType as PartnerType,
@@ -62,6 +64,9 @@ export async function registerPartner(
         },
       });
     });
+
+    await trackEvent({ event: "partner_registered", userId: user.id, properties: { partnerType, slug } });
+    await logAudit({ actorId: user.id, action: "PARTNER_REGISTERED", entityType: "PartnerProfile", entityId: profile.id });
   } catch (err) {
     console.error("[partner register]", err);
     return { error: "Could not create partner account. The email may already be in use." };
@@ -82,10 +87,13 @@ export async function approvePartner(
   const id = formData.get("partnerProfileId") as string;
   if (!id) return { error: "Missing partner profile" };
 
-  await prisma.partnerProfile.update({
+  const profile = await prisma.partnerProfile.update({
     where: { id },
     data: { isApproved: true },
   });
+
+  await trackEvent({ event: "partner_approved", userId: session.user.id, properties: { partnerId: profile.id } });
+  await logAudit({ actorId: session.user.id, action: "PARTNER_APPROVED", entityType: "PartnerProfile", entityId: profile.id });
 
   return { ok: true };
 }

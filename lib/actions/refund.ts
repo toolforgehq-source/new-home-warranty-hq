@@ -3,6 +3,8 @@
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { trackEvent } from "@/lib/analytics";
+import { logAudit } from "@/lib/audit";
 import { stripe } from "@/lib/stripe";
 
 export async function processRefund(
@@ -44,6 +46,9 @@ export async function processRefund(
     where: { id: purchase.id },
     data: { status: "REFUNDED", refundedAt: new Date(), refundAmount: purchase.amount },
   });
+
+  await trackEvent({ event: "refund_processed", userId: session.user.id, properties: { purchaseId: purchase.id, amount: purchase.amount } });
+  await logAudit({ actorId: session.user.id, action: "REFUND_PROCESSED", entityType: "Purchase", entityId: purchase.id });
 
   return { ok: true };
 }

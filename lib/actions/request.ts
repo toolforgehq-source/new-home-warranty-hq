@@ -4,6 +4,8 @@ import { headers } from "next/headers";
 import { WarrantyRequest } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { trackEvent } from "@/lib/analytics";
+import { logAudit } from "@/lib/audit";
 
 export async function generateWarrantyRequest(
   _prevState: { request?: WarrantyRequest; error?: string } | null,
@@ -68,6 +70,9 @@ ${issue.user.email || session.user.email}
     },
   });
 
+  await trackEvent({ event: "request_generated", userId: session.user.id, properties: { issueId: issue.id, homeId: issue.homeId } });
+  await logAudit({ actorId: session.user.id, action: "REQUEST_GENERATED", entityType: "WarrantyRequest", entityId: warrantyRequest.id });
+
   return { request: warrantyRequest };
 }
 
@@ -95,6 +100,9 @@ export async function approveRequest(_prevState: { error?: string } | null, form
     where: { id: warrantyRequest.id },
     data: { status: "APPROVED", approvedAt: new Date() },
   });
+
+  await trackEvent({ event: "request_approved", userId: session.user.id, properties: { requestId: warrantyRequest.id } });
+  await logAudit({ actorId: session.user.id, action: "REQUEST_APPROVED", entityType: "WarrantyRequest", entityId: warrantyRequest.id });
 
   return { ok: true };
 }

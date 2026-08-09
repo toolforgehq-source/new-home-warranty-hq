@@ -4,6 +4,8 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { trackEvent } from "@/lib/analytics";
+import { logAudit } from "@/lib/audit";
 
 export async function createAppointment(
   _prevState: { error?: string } | null,
@@ -66,6 +68,9 @@ export async function createAppointment(
       });
     }
   });
+
+  await trackEvent({ event: "appointment_scheduled", userId: session.user.id, properties: { issueId } });
+  await logAudit({ actorId: session.user.id, action: "APPOINTMENT_SCHEDULED", entityType: "Issue", entityId: issueId });
 
   redirect(`/dashboard/issues/${issueId}`);
 }

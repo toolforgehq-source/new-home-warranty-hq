@@ -42,6 +42,9 @@ export default async function AdminPage() {
           <Link href="/admin/refunds" className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-navy ring-1 ring-gray-200 hover:bg-gray-50">
             Refunds
           </Link>
+          <Link href="/admin/audit" className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-navy ring-1 ring-gray-200 hover:bg-gray-50">
+            Audit Log
+          </Link>
         </div>
 
         <div className="mt-8 rounded-2xl bg-white p-6 shadow-sm">

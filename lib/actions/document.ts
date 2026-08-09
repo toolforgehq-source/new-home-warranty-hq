@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { DocumentType } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { trackEvent } from "@/lib/analytics";
+import { logAudit } from "@/lib/audit";
 import { uploadFile } from "@/lib/storage";
 
 export async function uploadDocument(
@@ -61,7 +63,7 @@ export async function uploadDocument(
     return { error: "Could not upload file. Storage may not be configured." };
   }
 
-  await prisma.document.create({
+  const document = await prisma.document.create({
     data: {
       homeId: home.id,
       userId: session.user.id,
@@ -72,6 +74,9 @@ export async function uploadDocument(
       mimeType: file.type,
     },
   });
+
+  await trackEvent({ event: "document_uploaded", userId: session.user.id, properties: { homeId: home.id, type } });
+  await logAudit({ actorId: session.user.id, action: "DOCUMENT_UPLOADED", entityType: "Document", entityId: document.id });
 
   redirect("/dashboard/documents");
 }

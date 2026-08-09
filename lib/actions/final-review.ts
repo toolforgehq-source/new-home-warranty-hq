@@ -4,6 +4,8 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { trackEvent } from "@/lib/analytics";
+import { logAudit } from "@/lib/audit";
 
 export async function createFinalReview(
   _prevState: { error?: string } | null,
@@ -46,6 +48,9 @@ export async function createFinalReview(
       completedAt: new Date(),
     },
   });
+
+  await trackEvent({ event: "final_review_completed", userId: session.user.id, properties: { homeId: home.id, reviewId: review.id } });
+  await logAudit({ actorId: session.user.id, action: "FINAL_REVIEW_COMPLETED", entityType: "FinalReview", entityId: review.id });
 
   redirect(`/dashboard/final-review/${review.id}`);
 }

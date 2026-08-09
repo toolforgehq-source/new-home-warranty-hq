@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { RepairVerificationStatus, IssueStatus } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { trackEvent } from "@/lib/analytics";
+import { logAudit } from "@/lib/audit";
 
 function nextIssueStatus(verification: RepairVerificationStatus): IssueStatus {
   if (verification === "FULLY_RESOLVED") return "RESOLVED";
@@ -73,6 +75,9 @@ export async function createRepairVerification(
       },
     });
   });
+
+  await trackEvent({ event: "repair_verified", userId: session.user.id, properties: { issueId, status: verificationStatus } });
+  await logAudit({ actorId: session.user.id, action: "REPAIR_VERIFIED", entityType: "Issue", entityId: issueId });
 
   redirect(`/dashboard/issues/${issueId}`);
 }

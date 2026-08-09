@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { sendWelcomeEmail } from "@/lib/emails/welcome";
+import { trackEvent } from "@/lib/analytics";
+import { logAudit } from "@/lib/audit";
 
 export async function completeOnboarding(
   _prevState: { error?: string } | null,
@@ -119,6 +121,8 @@ export async function completeOnboarding(
     const home = await prisma.home.findFirst({ where: { primaryOwnerId: user.id }, orderBy: { createdAt: "desc" } });
     if (home) {
       await sendWelcomeEmail({ to: token.email, name, address: home.address });
+      await trackEvent({ event: "account_activated", userId: user.id, properties: { homeId: home.id } });
+      await logAudit({ actorId: user.id, action: "ONBOARDING_COMPLETED", entityType: "Home", entityId: home.id });
     }
   } catch (err) {
     console.error("[onboarding error]", err);
