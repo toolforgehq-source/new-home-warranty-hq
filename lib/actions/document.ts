@@ -2,6 +2,7 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { DocumentType } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { uploadFile } from "@/lib/storage";
@@ -32,7 +33,6 @@ export async function uploadDocument(
     return { error: "File and label are required" };
   }
 
-  const ext = file.name.split(".").pop() || "";
   const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
   const key = `documents/${home.id}/${Date.now()}-${safeName}`;
 
@@ -47,7 +47,7 @@ export async function uploadDocument(
     data: {
       homeId: home.id,
       userId: session.user.id,
-      type: type as any,
+      type: type as DocumentType,
       label,
       fileKey: key,
       fileSize: file.size,

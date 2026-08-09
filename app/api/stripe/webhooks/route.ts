@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
+import Stripe from "stripe";
 import { stripe } from "@/lib/stripe";
 import prisma from "@/lib/prisma";
 
@@ -7,7 +8,7 @@ export async function POST(request: NextRequest) {
   const payload = await request.text();
   const sig = request.headers.get("stripe-signature");
 
-  let event: any;
+  let event: Stripe.Event;
 
   if (process.env.STRIPE_WEBHOOK_SECRET && sig) {
     try {
@@ -22,7 +23,7 @@ export async function POST(request: NextRequest) {
 
   try {
     if (event.type === "checkout.session.completed") {
-      const session = event.data.object as any;
+      const session = event.data.object as Stripe.Checkout.Session;
       const productType = session.metadata?.productType;
 
       if (productType === "HOMEOWNER") {
@@ -108,7 +109,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (event.type === "charge.refunded") {
-      const charge = event.data.object as any;
+      const charge = event.data.object as Stripe.Charge;
       await prisma.purchase.updateMany({
         where: { stripePaymentIntentId: charge.payment_intent as string },
         data: { status: "REFUNDED", refundedAt: new Date() },
@@ -116,7 +117,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (event.type === "payment_intent.payment_failed") {
-      const paymentIntent = event.data.object as any;
+      const paymentIntent = event.data.object as Stripe.PaymentIntent;
       await prisma.purchase.updateMany({
         where: { stripePaymentIntentId: paymentIntent.id },
         data: { status: "FAILED" },

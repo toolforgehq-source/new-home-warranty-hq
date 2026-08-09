@@ -2,6 +2,7 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { PartnerType } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 
@@ -54,7 +55,7 @@ export async function registerPartner(
       await tx.partnerProfile.create({
         data: {
           userId: user.id,
-          partnerType: partnerType as any,
+          partnerType: partnerType as PartnerType,
           company,
           slug,
           isApproved: false,

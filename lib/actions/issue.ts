@@ -2,6 +2,7 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { IssueCategory } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 
@@ -44,7 +45,7 @@ export async function createIssue(_prevState: { error?: string } | null, formDat
       userId: session.user.id,
       title,
       location,
-      category: category as any,
+      category: category as IssueCategory,
       dateNoticed: dateNoticed ? new Date(dateNoticed) : null,
       description,
       isRecurring,

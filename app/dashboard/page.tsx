@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { daysSince, addMonths } from "@/lib/date";
 
 export default async function DashboardPage() {
   const session = await auth.api.getSession({
@@ -35,16 +36,8 @@ export default async function DashboardPage() {
     }
   }
 
-  const daysSinceClosing = home
-    ? Math.max(0, Math.floor((Date.now() - home.closingDate.getTime()) / (1000 * 60 * 60 * 24)))
-    : null;
-
-  const recommended11Month = home
-    ? new Date(home.closingDate)
-    : null;
-  if (recommended11Month) {
-    recommended11Month.setMonth(recommended11Month.getMonth() + 11);
-  }
+  const daysSinceClosing = home ? daysSince(home.closingDate) : null;
+  const recommended11Month = home ? addMonths(home.closingDate, 11) : null;
 
   return (
     <div className="min-h-screen bg-gray-50 p-6 lg:p-8">

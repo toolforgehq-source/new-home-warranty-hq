@@ -1,11 +1,12 @@
 "use server";
 
 import { headers } from "next/headers";
+import { WarrantyRequest } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 
 export async function generateWarrantyRequest(
-  _prevState: { request?: any; error?: string } | null,
+  _prevState: { request?: WarrantyRequest; error?: string } | null,
   formData: FormData
 ) {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -75,7 +76,6 @@ export async function approveRequest(_prevState: { error?: string } | null, form
   if (!session) return { error: "Not authenticated" };
 
   const requestId = formData.get("requestId") as string;
-  const action = formData.get("action") as string; // "email_app" | "copy" | "portal"
 
   const warrantyRequest = await prisma.warrantyRequest.findFirst({
     where: {

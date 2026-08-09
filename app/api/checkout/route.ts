@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { headers } from "next/headers";
-import { randomUUID } from "crypto";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { stripe, STRIPE_PRICE_HOMEOWNER, STRIPE_PRICE_GIFT, APP_URL } from "@/lib/stripe";
