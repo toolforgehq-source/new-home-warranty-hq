@@ -3,6 +3,9 @@ import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { SubmissionForm } from "./SubmissionForm";
+import { AppointmentForm } from "./AppointmentForm";
+import { RepairVerificationForm } from "./RepairVerificationForm";
 
 export default async function IssueDetailPage({
   params,
@@ -23,10 +26,12 @@ export default async function IssueDetailPage({
         ],
       },
     },
-    include: { documents: true, warrantyRequests: true, statusHistory: true },
+    include: { documents: true, warrantyRequests: true, statusHistory: true, submissionRecords: true, appointments: true, repairVerifications: true },
   });
 
   if (!issue) notFound();
+
+  const approvedRequest = issue.warrantyRequests.find((r) => r.status === "APPROVED");
 
   return (
     <main className="p-6 lg:p-8">
@@ -94,6 +99,78 @@ export default async function IssueDetailPage({
             ))}
           </ul>
         </div>
+
+        {issue.submissionRecords.length > 0 && (
+          <div className="mt-6 rounded-2xl bg-white p-6 shadow-sm">
+            <h2 className="font-semibold text-navy">Submission Records</h2>
+            <ul className="mt-4 space-y-4">
+              {issue.submissionRecords.map((record) => (
+                <li key={record.id} className="rounded-xl bg-gray-50 p-4 text-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold capitalize text-navy">{record.method.toLowerCase()}</span>
+                    <span className="text-gray-500">{record.createdAt.toLocaleString()}</span>
+                  </div>
+                  {record.destination && <p className="mt-1 text-gray-600">To: {record.destination}</p>}
+                  {record.confirmationNumber && (
+                    <p className="mt-1 text-gray-600">Confirmation: {record.confirmationNumber}</p>
+                  )}
+                  {record.message && <p className="mt-2 whitespace-pre-line text-navy">{record.message}</p>}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        <SubmissionForm issueId={issue.id} warrantyRequestId={approvedRequest?.id ?? null} />
+
+        {issue.appointments.length > 0 && (
+          <div className="mt-6 rounded-2xl bg-white p-6 shadow-sm">
+            <h2 className="font-semibold text-navy">Appointments</h2>
+            <ul className="mt-4 space-y-4">
+              {issue.appointments.map((appt) => (
+                <li key={appt.id} className="rounded-xl bg-gray-50 p-4 text-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-navy">
+                      {appt.appointmentDate ? new Date(appt.appointmentDate).toLocaleDateString() : "No date"}
+                    </span>
+                    {appt.missed && <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-700">Missed</span>}
+                    {appt.completionDate && (
+                      <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">
+                        Completed {new Date(appt.completionDate).toLocaleDateString()}
+                      </span>
+                    )}
+                  </div>
+                  {appt.builderRepresentative && <p className="mt-1 text-gray-600">Rep: {appt.builderRepresentative}</p>}
+                  {appt.trade && <p className="mt-1 text-gray-600">Trade: {appt.trade}</p>}
+                  {appt.promisedActions && <p className="mt-2 whitespace-pre-line text-navy">{appt.promisedActions}</p>}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        <AppointmentForm issueId={issue.id} />
+
+        {issue.repairVerifications.length > 0 && (
+          <div className="mt-6 rounded-2xl bg-white p-6 shadow-sm">
+            <h2 className="font-semibold text-navy">Repair verifications</h2>
+            <ul className="mt-4 space-y-4">
+              {issue.repairVerifications.map((v) => (
+                <li key={v.id} className="rounded-xl bg-gray-50 p-4 text-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold capitalize text-navy">
+                      {v.status.toLowerCase().replace(/_/g, " ")}
+                    </span>
+                    <span className="text-gray-500">{new Date(v.createdAt).toLocaleString()}</span>
+                  </div>
+                  {v.notes && <p className="mt-2 whitespace-pre-line text-navy">{v.notes}</p>}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {issue.status !== "RESOLVED" && <RepairVerificationForm issueId={issue.id} />}
       </div>
     </main>
   );
