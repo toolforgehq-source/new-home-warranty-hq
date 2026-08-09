@@ -1,0 +1,867 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Enums ----------
+
+enum UserRole {
+  HOMEOWNER
+  PARTNER
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  DISABLED
+  PENDING
+}
+
+enum AdminPermission {
+  VIEW_USERS
+  VIEW_HOMES
+  VIEW_PURCHASES
+  VIEW_GIFTS
+  PROCESS_REFUNDS
+  DISABLE_ACCOUNTS
+  RESEND_GIFTS
+  VIEW_ISSUES
+  VIEW_DOCUMENTS
+  MANAGE_PARTNERS
+  MANAGE_SETTINGS
+}
+
+enum ProductType {
+  HOMEOWNER
+  GIFT
+}
+
+enum PurchaseStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+enum HomeMembershipRole {
+  PRIMARY
+  COOWNER
+}
+
+enum HomeEntitlementStatus {
+  ACTIVE
+  REVOKED
+  EXPIRED
+}
+
+enum PartnerType {
+  REALTOR
+  LENDER
+  TITLE
+  INSPECTOR
+  OTHER
+}
+
+enum DocumentType {
+  BUILDER_WARRANTY
+  HOMEOWNER_MANUAL
+  PURCHASE_AGREEMENT
+  ADDENDUM
+  WORKMANSHIP_STANDARDS
+  INSPECTION_REPORT
+  PUNCH_LIST
+  THIRD_PARTY_WARRANTY
+  BUILDER_INSTRUCTIONS
+  ISSUE_PHOTO
+  ISSUE_ATTACHMENT
+  SUBMISSION_CONFIRMATION
+  REPAIR_PHOTO
+  FINAL_REPORT
+  REQUEST_LETTER
+  OTHER
+}
+
+enum DocumentStatus {
+  ACTIVE
+  DELETED
+}
+
+enum IssueStatus {
+  OPEN
+  SUBMITTED
+  SCHEDULED
+  RESOLVED
+}
+
+enum IssueCategory {
+  EXTERIOR
+  ROOF
+  SIDING
+  WINDOWS
+  DOORS
+  CONCRETE
+  FOUNDATION
+  DRAINAGE
+  GARAGE
+  KITCHEN
+  BATHROOM
+  PLUMBING
+  HVAC
+  ELECTRICAL
+  FLOORING
+  CABINETS
+  COUNTERTOPS
+  WALLS_CEILING
+  BASEMENT
+  OTHER
+}
+
+enum WarrantyRequestType {
+  ISSUE
+  WARRANTY_DOCUMENT
+}
+
+enum WarrantyRequestStatus {
+  DRAFT
+  APPROVED
+  SENT
+}
+
+enum SubmissionMethod {
+  EMAIL
+  PORTAL
+  PDF
+  MAIL
+  OTHER
+}
+
+enum RepairVerificationStatus {
+  FULLY_RESOLVED
+  PARTIALLY_RESOLVED
+  NOT_RESOLVED
+  ISSUE_RETURNED
+  NEW_DAMAGE
+  NEED_MORE_TIME
+}
+
+enum ReminderType {
+  SUBMISSION_PENDING
+  BUILDER_RESPONSE_PENDING
+  APPOINTMENT_UPCOMING
+  REPAIR_COMPLETED_VERIFY
+  UNRESOLVED_ISSUES
+  WARRANTY_REVIEW_UPCOMING
+  DOCUMENT_MISSING
+  FINAL_REVIEW
+}
+
+enum ReminderChannel {
+  EMAIL
+  SMS
+}
+
+enum ReminderStatus {
+  PENDING
+  SENT
+  DISMISSED
+  ACTIONED
+}
+
+enum GiftPurchaseStatus {
+  PENDING
+  PAID
+  REDEEMED
+}
+
+enum ExportFormat {
+  PDF
+  ZIP
+}
+
+enum ExportJobStatus {
+  PENDING
+  PROCESSING
+  READY
+  FAILED
+}
+
+enum ConnectedEmailProvider {
+  GOOGLE
+  MICROSOFT
+}
+
+// ---------- Better Auth core ----------
+
+model User {
+  id                    String             @id @default(cuid())
+  email                 String             @unique
+  name                  String
+  emailVerified         Boolean            @default(false)
+  image                 String?
+  role                  UserRole           @default(HOMEOWNER)
+  status                UserStatus         @default(ACTIVE)
+  permissions           AdminPermission[]  @default([])
+  phone                 String?
+  smsOptIn              Boolean            @default(false)
+  smsConsentAt          DateTime?
+  onboardingCompletedAt DateTime?
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+
+  // Better Auth
+  accounts      Account[]
+  sessions      Session[]
+
+  // App
+  ownedHomes              Home[]                   @relation("HomePrimaryOwner")
+  homeMemberships         HomeMembership[]
+  partnerProfile          PartnerProfile? @relation("PartnerUser")
+  purchases               Purchase[]
+  sentGifts               GiftPurchase[]           @relation("GiftPartner")
+  redeemedGifts           GiftPurchase[]           @relation("GiftRedeemedBy")
+  entitlements            HomeEntitlement[]
+  documents               Document[]
+  issues                  Issue[]
+  connectedEmailAccounts  ConnectedEmailAccount[]
+  reminders               Reminder[]
+  reminderSetting         ReminderSetting? @relation("ReminderSettingUser")
+  warrantyRequests        WarrantyRequest[]
+  submissionRecords       SubmissionRecord[]
+  repairVerifications     RepairVerification[]
+  supportNotesAsAdmin     SupportNote[]            @relation("SupportAdmin")
+  auditLogs               AuditLog[]
+  analyticsEvents         AnalyticsEvent[]
+  partnerRecommendationVisits PartnerRecommendationVisit[]
+  exports                 ExportJob[]
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("session")
+}
+
+model Account {
+  id                    String  @id @default(cuid())
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@unique([providerId, accountId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([identifier, value])
+  @@map("verification")
+}
+
+// ---------- Homes ----------
+
+model Home {
+  id                       String    @id @default(cuid())
+  address                  String
+  closingDate              DateTime
+  occupancyDate            DateTime?
+  builderName              String
+  builderContactName       String?
+  builderEmail             String?
+  builderPhone             String?
+  builderWarrantyPortalUrl String?
+  thirdPartyWarrantyCompany String?
+  state                    String?
+  propertyCharacteristics  Json?
+  primaryOwnerId           String
+  primaryOwner             User      @relation("HomePrimaryOwner", fields: [primaryOwnerId], references: [id])
+  giftPurchaseId           String?   @unique
+  giftPurchase             GiftPurchase? @relation("GiftHome", fields: [giftPurchaseId], references: [id])
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
+
+  memberships  HomeMembership[]
+  documents    Document[]
+  issues       Issue[]
+  entitlements HomeEntitlement[]
+  reminders    Reminder[]
+  finalReviews FinalReview[]
+  exports      ExportJob[]
+  invitations  HomeInvitation[]
+  warrantyRequests WarrantyRequest[]
+
+  @@index([primaryOwnerId])
+  @@map("home")
+}
+
+model HomeMembership {
+  id        String             @id @default(cuid())
+  homeId    String
+  home      Home               @relation(fields: [homeId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      HomeMembershipRole @default(COOWNER)
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  @@unique([homeId, userId])
+  @@index([homeId])
+  @@index([userId])
+  @@map("home_membership")
+}
+
+model HomeInvitation {
+  id        String             @id @default(cuid())
+  homeId    String
+  home      Home               @relation(fields: [homeId], references: [id], onDelete: Cascade)
+  email     String
+  token     String             @unique
+  role      HomeMembershipRole @default(COOWNER)
+  usedAt    DateTime?
+  expiresAt DateTime
+  createdAt DateTime           @default(now())
+
+  @@index([homeId])
+  @@index([token])
+  @@index([email])
+  @@map("home_invitation")
+}
+
+// ---------- Purchases & Entitlements ----------
+
+model Purchase {
+  id                      String         @id @default(cuid())
+  userId                  String?
+  user                    User?          @relation(fields: [userId], references: [id])
+  productType             ProductType
+  amount                  Int // cents
+  currency                String         @default("usd")
+  taxBehavior             String?        // inclusive | exclusive | unspecified | automatic
+  stripePaymentIntentId   String?        @unique
+  stripeCheckoutSessionId String?        @unique
+  stripeCustomerId        String?
+  status                  PurchaseStatus @default(PENDING)
+  refundedAt              DateTime?
+  refundAmount            Int?
+  createdAt               DateTime       @default(now())
+  updatedAt               DateTime       @updatedAt
+
+  giftPurchase    GiftPurchase? @relation("PurchaseGift")
+  onboardingToken OnboardingToken? @relation("OnboardingPurchase")
+  entitlement     HomeEntitlement? @relation("EntitlementPurchase")
+
+  @@index([userId])
+  @@index([status])
+  @@index([productType, status])
+  @@index([stripePaymentIntentId])
+  @@index([stripeCheckoutSessionId])
+  @@map("purchase")
+}
+
+model GiftPurchase {
+  id              String             @id @default(cuid())
+  partnerId       String
+  partner         User               @relation("GiftPartner", fields: [partnerId], references: [id])
+  purchaseId      String             @unique
+  purchase        Purchase           @relation("PurchaseGift", fields: [purchaseId], references: [id])
+  recipientName   String
+  recipientEmail  String
+  propertyAddress String?
+  giftMessage     String?
+  status          GiftPurchaseStatus @default(PENDING)
+  redeemedAt      DateTime?
+  redeemedByUserId String?
+  redeemedBy      User?              @relation("GiftRedeemedBy", fields: [redeemedByUserId], references: [id])
+  home            Home?              @relation("GiftHome")
+  onboardingToken OnboardingToken?   @relation("OnboardingGift")
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  @@index([partnerId])
+  @@index([recipientEmail])
+  @@index([redeemedByUserId])
+  @@index([status])
+  @@map("gift_purchase")
+}
+
+model OnboardingToken {
+  id             String       @id @default(cuid())
+  token          String       @unique
+  email          String
+  purchaseId     String?      @unique
+  purchase       Purchase?    @relation("OnboardingPurchase", fields: [purchaseId], references: [id])
+  giftPurchaseId String?      @unique
+  giftPurchase   GiftPurchase? @relation("OnboardingGift", fields: [giftPurchaseId], references: [id])
+  usedAt         DateTime?
+  expiresAt      DateTime
+  createdAt      DateTime     @default(now())
+
+  @@index([token])
+  @@index([purchaseId])
+  @@index([giftPurchaseId])
+  @@map("onboarding_token")
+}
+
+model HomeEntitlement {
+  id        String                @id @default(cuid())
+  userId    String
+  user      User                  @relation(fields: [userId], references: [id])
+  homeId    String
+  home      Home                  @relation(fields: [homeId], references: [id])
+  purchaseId String               @unique
+  purchase  Purchase              @relation("EntitlementPurchase", fields: [purchaseId], references: [id])
+  status    HomeEntitlementStatus @default(ACTIVE)
+  expiresAt DateTime?
+  createdAt DateTime              @default(now())
+  updatedAt DateTime              @updatedAt
+
+  @@unique([userId, homeId])
+  @@index([userId])
+  @@index([homeId])
+  @@map("home_entitlement")
+}
+
+// ---------- Partners ----------
+
+model PartnerProfile {
+  id        String      @id @default(cuid())
+  userId    String      @unique
+  user      User        @relation("PartnerUser", fields: [userId], references: [id], onDelete: Cascade)
+  partnerType PartnerType
+  company   String?
+  photoUrl  String?
+  logoUrl   String?
+  phone     String?
+  slug      String      @unique
+  isApproved Boolean    @default(false)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@index([slug])
+  @@index([isApproved])
+  @@map("partner_profile")
+}
+
+// ---------- Documents ----------
+
+model Document {
+  id        String          @id @default(cuid())
+  homeId    String
+  home      Home            @relation(fields: [homeId], references: [id], onDelete: Cascade)
+  issueId   String?
+  issue     Issue?          @relation(fields: [issueId], references: [id], onDelete: SetNull)
+  userId    String
+  user      User            @relation(fields: [userId], references: [id])
+  type      DocumentType
+  label     String
+  fileKey   String          @unique
+  fileSize  Int?
+  mimeType  String?
+  status    DocumentStatus  @default(ACTIVE)
+  uploadedAt DateTime        @default(now())
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  submissionAttachments  SubmissionAttachment[]
+  submissionScreenshots  SubmissionRecord[]     @relation("SubmissionScreenshot")
+  repairVerificationPhotos RepairVerificationPhoto[]
+  requestAttachments     RequestAttachment[]
+
+  @@index([homeId, issueId, type])
+  @@index([homeId, type])
+  @@index([fileKey])
+  @@index([userId])
+  @@map("document")
+}
+
+// ---------- Issues & Requests ----------
+
+model Issue {
+  id                    String       @id @default(cuid())
+  homeId                String
+  home                  Home         @relation(fields: [homeId], references: [id], onDelete: Cascade)
+  userId                String
+  user                  User         @relation(fields: [userId], references: [id])
+  title                 String
+  location              String?
+  category              IssueCategory @default(OTHER)
+  dateNoticed           DateTime?
+  description           String?
+  isRecurring           Boolean      @default(false)
+  isWorsening           Boolean      @default(false)
+  previousCommunication String?
+  previousRepairAttempt String?
+  status                IssueStatus  @default(OPEN)
+  isDeleted             Boolean      @default(false)
+  deletedAt             DateTime?
+  deletedBy             String?
+  deletedReason         String?
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+  resolvedAt            DateTime?
+  resolutionNotes       String?
+
+  documents           Document[]
+  warrantyRequests    WarrantyRequest[]
+  submissionRecords   SubmissionRecord[]
+  appointments        Appointment[]
+  repairVerifications RepairVerification[]
+  statusHistory       IssueStatusHistory[]
+  reminders           Reminder[]
+
+  @@index([homeId, status])
+  @@index([homeId, createdAt])
+  @@index([homeId, isDeleted])
+  @@index([userId])
+  @@index([status, createdAt])
+  @@map("issue")
+}
+
+model IssueStatusHistory {
+  id        String      @id @default(cuid())
+  issueId   String
+  issue     Issue       @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  status    IssueStatus
+  changedBy String
+  note      String?
+  createdAt DateTime    @default(now())
+
+  @@index([issueId, createdAt])
+  @@map("issue_status_history")
+}
+
+model WarrantyRequest {
+  id               String                @id @default(cuid())
+  homeId           String
+  home             Home                  @relation(fields: [homeId], references: [id], onDelete: Cascade)
+  issueId          String?
+  issue            Issue?                @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  type             WarrantyRequestType   @default(ISSUE)
+  generatedContent String                @db.Text
+  requestedNextStep  String?
+  status           WarrantyRequestStatus @default(DRAFT)
+  approvedAt       DateTime?
+  sentAt           DateTime?
+  generatedAt      DateTime              @default(now())
+  createdBy        String
+  user             User                  @relation(fields: [createdBy], references: [id])
+
+  submissionRecords SubmissionRecord[]
+  requestAttachments RequestAttachment[]
+
+  @@index([homeId, status])
+  @@index([issueId])
+  @@index([createdBy])
+  @@map("warranty_request")
+}
+
+model RequestAttachment {
+  id                String           @id @default(cuid())
+  warrantyRequestId String
+  warrantyRequest   WarrantyRequest  @relation(fields: [warrantyRequestId], references: [id], onDelete: Cascade)
+  documentId        String
+  document          Document         @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  order             Int              @default(0)
+  createdAt         DateTime         @default(now())
+
+  @@unique([warrantyRequestId, documentId])
+  @@index([warrantyRequestId])
+  @@index([documentId])
+  @@map("request_attachment")
+}
+
+model SubmissionRecord {
+  id                       String           @id @default(cuid())
+  issueId                  String
+  issue                    Issue            @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  warrantyRequestId        String?
+  warrantyRequest          WarrantyRequest? @relation(fields: [warrantyRequestId], references: [id])
+  method                   SubmissionMethod
+  destination              String?
+  message                  String           @db.Text
+  confirmationNumber       String?
+  confirmationScreenshotId String?
+  confirmationScreenshot   Document?        @relation("SubmissionScreenshot", fields: [confirmationScreenshotId], references: [id])
+  sentFromHomeowner        Boolean          @default(false)
+  sentAt                   DateTime?
+  submittedBy              String
+  user                     User             @relation(fields: [submittedBy], references: [id])
+  createdAt                DateTime         @default(now())
+  updatedAt                DateTime         @updatedAt
+
+  attachments SubmissionAttachment[]
+
+  @@index([issueId])
+  @@index([warrantyRequestId])
+  @@index([submittedBy])
+  @@index([createdAt])
+  @@map("submission_record")
+}
+
+model SubmissionAttachment {
+  id                 String           @id @default(cuid())
+  submissionRecordId String
+  submissionRecord   SubmissionRecord @relation(fields: [submissionRecordId], references: [id], onDelete: Cascade)
+  documentId         String
+  document           Document         @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  createdAt          DateTime         @default(now())
+
+  @@unique([submissionRecordId, documentId])
+  @@index([submissionRecordId])
+  @@index([documentId])
+  @@map("submission_attachment")
+}
+
+model Appointment {
+  id                    String    @id @default(cuid())
+  issueId               String
+  issue                 Issue     @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  appointmentDate       DateTime?
+  builderRepresentative String?
+  trade                 String?
+  expectedRepairDate    DateTime?
+  promisedActions       String?
+  partsOrdered          String?
+  notes                 String?
+  missed                Boolean   @default(false)
+  completionDate        DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([issueId])
+  @@index([appointmentDate])
+  @@map("appointment")
+}
+
+model RepairVerification {
+  id          String                   @id @default(cuid())
+  issueId     String
+  issue       Issue                    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  status      RepairVerificationStatus
+  notes       String?
+  verifiedAt  DateTime?
+  createdBy   String
+  user        User                     @relation(fields: [createdBy], references: [id])
+  createdAt   DateTime                 @default(now())
+  updatedAt   DateTime                 @updatedAt
+
+  photos RepairVerificationPhoto[]
+
+  @@index([issueId])
+  @@index([createdBy])
+  @@map("repair_verification")
+}
+
+model RepairVerificationPhoto {
+  id                 String             @id @default(cuid())
+  repairVerificationId String
+  repairVerification RepairVerification @relation(fields: [repairVerificationId], references: [id], onDelete: Cascade)
+  documentId         String
+  document           Document           @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  order              Int                @default(0)
+  createdAt          DateTime           @default(now())
+
+  @@unique([repairVerificationId, documentId])
+  @@index([repairVerificationId])
+  @@index([documentId])
+  @@map("repair_verification_photo")
+}
+
+// ---------- Reminders & Calendar ----------
+
+model Reminder {
+  id        String          @id @default(cuid())
+  userId    String
+  user      User            @relation(fields: [userId], references: [id])
+  homeId    String?
+  home      Home?           @relation(fields: [homeId], references: [id])
+  issueId   String?
+  issue     Issue?          @relation(fields: [issueId], references: [id])
+  type      ReminderType
+  dueDate   DateTime
+  channel   ReminderChannel @default(EMAIL)
+  status    ReminderStatus  @default(PENDING)
+  sentAt    DateTime?
+  metadata  Json?
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  @@index([dueDate, status])
+  @@index([userId, status])
+  @@index([homeId])
+  @@index([issueId])
+  @@index([type, status])
+  @@map("reminder")
+}
+
+model ReminderSetting {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation("ReminderSettingUser", fields: [userId], references: [id])
+  emailEnabled    Boolean  @default(true)
+  smsEnabled      Boolean  @default(false)
+  digestEnabled   Boolean  @default(true)
+  quietHoursStart Int?
+  quietHoursEnd   Int?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("reminder_setting")
+}
+
+// ---------- Final Review & Export ----------
+
+model FinalReview {
+  id                        String    @id @default(cuid())
+  homeId                    String
+  home                      Home      @relation(fields: [homeId], references: [id], onDelete: Cascade)
+  startedAt                 DateTime  @default(now())
+  completedAt               DateTime?
+  findings                  Json?
+  consolidatedReportDocumentId String?
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime  @updatedAt
+
+  @@index([homeId])
+  @@map("final_review")
+}
+
+model ExportJob {
+  id          String          @id @default(cuid())
+  userId      String
+  user        User            @relation(fields: [userId], references: [id])
+  homeId      String
+  home        Home            @relation(fields: [homeId], references: [id])
+  format      ExportFormat
+  status      ExportJobStatus
+  fileKey     String?
+  fileSize    Int?
+  expiresAt   DateTime?
+  createdAt   DateTime        @default(now())
+  completedAt DateTime?
+
+  @@index([userId, status])
+  @@index([homeId])
+  @@index([status, createdAt])
+  @@map("export_job")
+}
+
+// ---------- Admin & Audit ----------
+
+model SupportNote {
+  id        String   @id @default(cuid())
+  adminId   String
+  admin     User     @relation("SupportAdmin", fields: [adminId], references: [id])
+  userId    String?
+  homeId    String?
+  issueId   String?
+  note      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([adminId])
+  @@index([userId])
+  @@map("support_note")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actor      User?    @relation(fields: [actorId], references: [id])
+  action     String
+  entityType String
+  entityId   String?
+  metadata   Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([actorId])
+  @@index([createdAt])
+  @@map("audit_log")
+}
+
+// ---------- Analytics ----------
+
+model AnalyticsEvent {
+  id          String   @id @default(cuid())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id])
+  anonymousId String?
+  event       String
+  properties  Json?
+  sessionId   String?
+  createdAt   DateTime @default(now())
+
+  @@index([event, createdAt])
+  @@index([userId])
+  @@index([anonymousId])
+  @@map("analytics_event")
+}
+
+model PartnerRecommendationVisit {
+  id              String    @id @default(cuid())
+  partnerId       String
+  partner         User      @relation(fields: [partnerId], references: [id])
+  ipHash          String?
+  userAgent       String?
+  convertedUserId String?
+  convertedAt     DateTime?
+  createdAt       DateTime  @default(now())
+
+  @@index([partnerId])
+  @@index([convertedUserId])
+  @@map("partner_recommendation_visit")
+}
+
+// ---------- Connected Email (Gmail / Outlook) ----------
+
+model ConnectedEmailAccount {
+  id           String                   @id @default(cuid())
+  userId       String
+  user         User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider     ConnectedEmailProvider
+  email        String
+  accessToken  String?                  @db.Text
+  refreshToken String?                  @db.Text
+  expiresAt    DateTime?
+  scope        String?
+  isActive     Boolean                  @default(true)
+  createdAt    DateTime                 @default(now())
+  updatedAt    DateTime                 @updatedAt
+
+  @@unique([userId, provider, email])
+  @@index([userId])
+  @@map("connected_email_account")
+}
