@@ -12,7 +12,7 @@ export const auth = betterAuth({
   trustedOrigins: [
     process.env.NEXT_PUBLIC_APP_URL,
     process.env.BETTER_AUTH_URL,
-    process.env.VERCEL_URL,
+    process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
     "http://localhost:3000",
   ].filter((url): url is string => typeof url === "string" && url.length > 0),
   emailAndPassword: {
