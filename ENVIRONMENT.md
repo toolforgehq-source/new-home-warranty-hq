@@ -82,7 +82,12 @@ All credentials are read from environment variables. Do not hard-code secrets.
 
 ## Vercel deployment
 
-1. Create a project on Vercel and link the GitHub repo.
-2. Add the environment variables above in the Vercel dashboard.
-3. For cron, add a Vercel Cron job pointing to `/api/cron/reminders?secret=${CRON_SECRET}`.
-4. For Stripe webhooks, set the endpoint to `{NEXT_PUBLIC_APP_URL}/api/stripe/webhooks`.
+The project is deployed to `toolforgehqs-projects/new-home-warranty-hq`.
+
+1. Neon Postgres is provisioned and connected through the Vercel integration.
+2. `DATABASE_URL` for **Production** points to the Neon `neondb` database.
+3. `DATABASE_URL` for **Preview** points to the `nhwhq_staging` database in the same Neon project, so production and preview data are separated.
+4. The build, cron, and environment settings are managed in `vercel.json`.
+5. The cron route is `/api/cron/reminders`. It accepts `?secret=${CRON_SECRET}` or an `Authorization: Bearer ${CRON_SECRET}` header.
+6. **Important:** Vercel Cron jobs require a Pro plan for hourly schedules. The current `vercel.json` uses a daily schedule so the Hobby plan can deploy; upgrade to Pro and change `schedule` to `0 * * * *` for hourly reminders.
+7. For Stripe webhooks, set the endpoint to `{NEXT_PUBLIC_APP_URL}/api/stripe/webhooks`.
