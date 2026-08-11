@@ -9,7 +9,8 @@ All credentials are read from environment variables. Do not hard-code secrets.
 | `NEXT_PUBLIC_APP_URL` | Canonical public app URL (e.g. `https://app.newhomewarrantyhq.com`) | Used in emails, Stripe success/cancel URLs, and OAuth callbacks. |
 | `BETTER_AUTH_SECRET` | Random 32+ character secret for session signing | Generate with `openssl rand -base64 32`. |
 | `BETTER_AUTH_URL` | Same as `NEXT_PUBLIC_APP_URL` | Better Auth needs this for callback URLs. |
-| `DATABASE_URL` | PostgreSQL connection string | Neon in production; local Postgres for dev. |
+| `DATABASE_URL` | PostgreSQL connection string (pooled) | Neon pooled URL in production/preview; local Postgres for dev. |
+| `DIRECT_DATABASE_URL` | PostgreSQL connection string (non-pooled) | Used for `prisma migrate deploy` during builds. |
 
 ## Payments (Stripe)
 
@@ -87,7 +88,8 @@ The project is deployed to `toolforgehqs-projects/new-home-warranty-hq`.
 1. Neon Postgres is provisioned and connected through the Vercel integration.
 2. `DATABASE_URL` for **Production** points to the Neon `neondb` database.
 3. `DATABASE_URL` for **Preview** points to the `nhwhq_staging` database in the same Neon project, so production and preview data are separated.
-4. The build, cron, and environment settings are managed in `vercel.json`.
-5. The cron route is `/api/cron/reminders`. It accepts `?secret=${CRON_SECRET}` or an `Authorization: Bearer ${CRON_SECRET}` header.
-6. **Important:** Vercel Cron jobs require a Pro plan for hourly schedules. The current `vercel.json` uses a daily schedule so the Hobby plan can deploy; upgrade to Pro and change `schedule` to `0 * * * *` for hourly reminders.
-7. For Stripe webhooks, set the endpoint to `{NEXT_PUBLIC_APP_URL}/api/stripe/webhooks`.
+4. `vercel.json` runs `npx prisma migrate deploy` as part of the build, using `DIRECT_DATABASE_URL` for non-pooled migration access.
+5. `DATABASE_URL` is a pooled Prisma-compatible URL for runtime queries; `DIRECT_DATABASE_URL` is the non-pooled counterpart used for migrations.
+6. The cron route is `/api/cron/reminders`. It accepts `?secret=${CRON_SECRET}` or an `Authorization: Bearer ${CRON_SECRET}` header.
+7. **Important:** Vercel Cron jobs require a Pro plan for hourly schedules. The current `vercel.json` uses a daily schedule so the Hobby plan can deploy; upgrade to Pro and change `schedule` to `0 * * * *` for hourly reminders.
+8. For Stripe webhooks, set the endpoint to `{NEXT_PUBLIC_APP_URL}/api/stripe/webhooks`.
