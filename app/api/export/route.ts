@@ -3,6 +3,7 @@ import JSZip from "jszip";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { uploadBuffer, downloadFile, getSignedDownloadUrl } from "@/lib/storage";
+import { hasActiveEntitlement } from "@/lib/entitlements";
 
 export async function POST(request: NextRequest) {
   const session = await auth.api.getSession({ headers: request.headers });
@@ -34,6 +35,10 @@ export async function POST(request: NextRequest) {
   });
 
   if (!home) return NextResponse.json({ error: "Home not found" }, { status: 404 });
+
+  if (!(await hasActiveEntitlement(session.user.id))) {
+    return NextResponse.json({ error: "Paid access is paused" }, { status: 403 });
+  }
 
   const job = await prisma.exportJob.create({
     data: {

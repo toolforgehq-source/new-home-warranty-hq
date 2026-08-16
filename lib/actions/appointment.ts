@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { trackEvent } from "@/lib/analytics";
 import { logAudit } from "@/lib/audit";
+import { hasActiveEntitlement } from "@/lib/entitlements";
 
 export async function createAppointment(
   _prevState: { error?: string } | null,
@@ -37,6 +38,10 @@ export async function createAppointment(
   });
 
   if (!issue) return { error: "Issue not found" };
+
+  if (!(await hasActiveEntitlement(session.user.id))) {
+    return { error: "Paid access is paused. Please contact support to reactivate your account." };
+  }
 
   await prisma.$transaction(async (tx) => {
     await tx.appointment.create({

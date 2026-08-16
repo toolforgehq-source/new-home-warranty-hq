@@ -7,6 +7,7 @@ import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { trackEvent } from "@/lib/analytics";
 import { logAudit } from "@/lib/audit";
+import { hasActiveEntitlement } from "@/lib/entitlements";
 
 function nextIssueStatus(verification: RepairVerificationStatus): IssueStatus {
   if (verification === "FULLY_RESOLVED") return "RESOLVED";
@@ -42,6 +43,10 @@ export async function createRepairVerification(
   });
 
   if (!issue) return { error: "Issue not found" };
+
+  if (!(await hasActiveEntitlement(session.user.id))) {
+    return { error: "Paid access is paused. Please contact support to reactivate your account." };
+  }
 
   const verificationStatus = status as RepairVerificationStatus;
   const newIssueStatus = nextIssueStatus(verificationStatus);
