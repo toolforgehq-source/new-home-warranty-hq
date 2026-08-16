@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { ShieldCheck, Lock, RefreshCcw } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 
 function CheckoutContent() {
@@ -84,6 +85,27 @@ function CheckoutContent() {
           >
             {loading ? "Redirecting..." : "Continue to Payment — $189"}
           </button>
+
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-4 text-xs text-gray-500">
+            <span className="flex items-center gap-1">
+              <Lock className="h-3.5 w-3.5" /> Secure checkout
+            </span>
+            <span className="flex items-center gap-1">
+              <RefreshCcw className="h-3.5 w-3.5" /> 30-day guarantee
+            </span>
+          </div>
+
+          <p className="mt-4 text-center text-xs text-gray-500">
+            By checking out you agree to our{" "}
+            <Link href="/terms" className="text-green hover:underline">
+              Terms
+            </Link>{" "}
+            and{" "}
+            <Link href="/refund" className="text-green hover:underline">
+              Refund Policy
+            </Link>
+            .
+          </p>
         </div>
       )}
 
@@ -107,11 +129,12 @@ function GiftCheckoutForm({
   onSubmit: (data: object) => Promise<void>;
   loading: boolean;
 }) {
+  const searchParams = useSearchParams();
   const [form, setForm] = useState({
-    recipientName: "",
-    recipientEmail: "",
-    propertyAddress: "",
-    giftMessage: "",
+    recipientName: searchParams.get("recipientName") ?? "",
+    recipientEmail: searchParams.get("recipientEmail") ?? "",
+    propertyAddress: searchParams.get("propertyAddress") ?? "",
+    giftMessage: searchParams.get("giftMessage") ?? "",
   });
 
   return (
@@ -163,6 +186,27 @@ function GiftCheckoutForm({
       >
         {loading ? "Redirecting..." : "Continue to Payment — $124"}
       </button>
+
+      <div className="mt-6 flex flex-wrap items-center justify-center gap-4 text-xs text-gray-500">
+        <span className="flex items-center gap-1">
+          <Lock className="h-3.5 w-3.5" /> Secure checkout
+        </span>
+        <span className="flex items-center gap-1">
+          <ShieldCheck className="h-3.5 w-3.5" /> Buyer privacy protected
+        </span>
+      </div>
+
+      <p className="mt-4 text-center text-xs text-gray-500">
+        By checking out you agree to our{" "}
+        <Link href="/terms" className="text-green hover:underline">
+          Terms
+        </Link>{" "}
+        and{" "}
+        <Link href="/refund" className="text-green hover:underline">
+          Refund Policy
+        </Link>
+        .
+      </p>
     </form>
   );
 }

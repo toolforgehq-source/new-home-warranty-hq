@@ -50,9 +50,21 @@ export default async function OnboardingPage({
         <div className="w-full max-w-lg rounded-2xl bg-white p-8 shadow-sm">
           <h1 className="text-2xl font-bold text-navy">Set up your home</h1>
           <p className="mt-2 text-gray-600">
-            Welcome to New Home Warranty HQ. Let&apos;s get your property information.
+            Welcome to New Home Warranty HQ. Let&apos;s get your property information
+            so you can start documenting and tracking warranty issues.
           </p>
           <OnboardingForm token={tokenParam} />
+          <p className="mt-4 text-center text-xs text-gray-500">
+            By setting up your account you agree to our{" "}
+            <Link href="/terms" className="text-green hover:underline">
+              Terms of Service
+            </Link>{" "}
+            and{" "}
+            <Link href="/refund" className="text-green hover:underline">
+              Refund Policy
+            </Link>
+            .
+          </p>
         </div>
       </div>
     );

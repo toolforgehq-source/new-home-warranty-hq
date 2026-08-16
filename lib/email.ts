@@ -8,11 +8,13 @@ export async function sendEmail({
   subject,
   text,
   html,
+  replyTo,
 }: {
   to: string;
   subject: string;
   text: string;
   html?: string;
+  replyTo?: string;
 }) {
   if (!resend) {
     console.log("[email] Resend not configured, skipping send", { to, subject });
@@ -25,6 +27,7 @@ export async function sendEmail({
     subject,
     text,
     html,
+    ...(replyTo ? { reply_to: replyTo } : {}),
   });
   console.log("[email] sent", { to, subject, id: result.data?.id });
   return result;
