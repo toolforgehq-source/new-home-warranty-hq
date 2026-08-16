@@ -19,11 +19,13 @@ export async function sendEmail({
     return { skipped: true };
   }
 
-  return resend.emails.send({
+  const result = await resend.emails.send({
     from: fromEmail,
     to,
     subject,
     text,
     html,
   });
+  console.log("[email] sent", { to, subject, id: result.data?.id });
+  return result;
 }
