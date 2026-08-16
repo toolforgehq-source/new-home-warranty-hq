@@ -154,6 +154,11 @@ export async function POST(request: NextRequest) {
           data: { status: "FAILED" },
         });
       }
+      // Fallback for sessions where payment_intent is not yet linked.
+      await prisma.purchase.updateMany({
+        where: { stripePaymentIntentId: paymentIntent.id, status: "PENDING" },
+        data: { status: "FAILED" },
+      });
     }
 
     if (event.type === "checkout.session.expired") {
