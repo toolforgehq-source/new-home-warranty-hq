@@ -6,6 +6,7 @@ import prisma from "@/lib/prisma";
 import { trackEvent } from "@/lib/analytics";
 import { logAudit } from "@/lib/audit";
 import { isStripeConfigured, stripe } from "@/lib/stripe";
+import { revokeEntitlementsAndInvalidateUnredeemedTokensForPurchase } from "@/lib/entitlements";
 
 export async function processRefund(
   _prevState: { error?: string } | null,
@@ -50,6 +51,8 @@ export async function processRefund(
     where: { id: purchase.id },
     data: { status: "REFUNDED", refundedAt: new Date(), refundAmount: purchase.amount },
   });
+
+  await revokeEntitlementsAndInvalidateUnredeemedTokensForPurchase(purchase.id);
 
   await trackEvent({ event: "refund_processed", userId: session.user.id, properties: { purchaseId: purchase.id, amount: purchase.amount } });
   await logAudit({ actorId: session.user.id, action: "REFUND_PROCESSED", entityType: "Purchase", entityId: purchase.id });

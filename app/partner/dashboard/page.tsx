@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { PartnerLogoutButton } from "@/components/partner/PartnerLogoutButton";
 
 export default async function PartnerDashboardPage() {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -26,6 +27,15 @@ export default async function PartnerDashboardPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-6 lg:p-8">
       <div className="mx-auto max-w-4xl">
+        <header className="mb-6 flex items-center justify-between">
+          <Link href="/" className="text-lg font-bold text-navy">
+            NEW HOME WARRANTY <span className="text-green">HQ</span>
+          </Link>
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-gray-600">{session.user.name || session.user.email}</span>
+            <PartnerLogoutButton />
+          </div>
+        </header>
         <h1 className="text-2xl font-bold text-navy">Partner Dashboard</h1>
 
         {!profile.isApproved && (

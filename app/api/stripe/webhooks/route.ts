@@ -5,6 +5,7 @@ import { stripe, APP_URL } from "@/lib/stripe";
 import prisma from "@/lib/prisma";
 import { sendHomeownerOnboardingLink, sendPurchaseReceipt } from "@/lib/emails/purchase";
 import { sendGiftInvitation } from "@/lib/emails/gift";
+import { revokeEntitlementsAndInvalidateUnredeemedTokensForPurchase } from "@/lib/entitlements";
 
 export async function POST(request: NextRequest) {
   const payload = await request.text();
@@ -147,6 +148,7 @@ export async function POST(request: NextRequest) {
             refundAmount: charge.amount_refunded ?? purchase.amount,
           },
         });
+        await revokeEntitlementsAndInvalidateUnredeemedTokensForPurchase(purchase.id);
       }
     }
 

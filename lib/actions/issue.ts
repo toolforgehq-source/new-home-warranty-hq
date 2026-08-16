@@ -7,6 +7,7 @@ import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { trackEvent } from "@/lib/analytics";
 import { logAudit } from "@/lib/audit";
+import { hasActiveEntitlement } from "@/lib/entitlements";
 
 export async function createIssue(_prevState: { error?: string } | null, formData: FormData) {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -25,6 +26,10 @@ export async function createIssue(_prevState: { error?: string } | null, formDat
 
   if (!home) {
     return { error: "No home found. Please complete onboarding first." };
+  }
+
+  if (!(await hasActiveEntitlement(session.user.id))) {
+    return { error: "Paid access is paused. Please contact support to reactivate your account." };
   }
 
   const title = (formData.get("title") as string)?.trim();

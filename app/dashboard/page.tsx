@@ -5,6 +5,17 @@ import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { daysSince, addMonths } from "@/lib/date";
 
+const entitlementBlockedMessage = (
+  <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-amber-900">
+    <h3 className="font-semibold">Paid access is currently paused</h3>
+    <p className="mt-1 text-sm">
+      This account has been refunded or the entitlement is no longer active.
+      Your records are still available to view, but new warranty features are
+      disabled. Contact support to reactivate.
+    </p>
+  </div>
+);
+
 export default async function DashboardPage() {
   const session = await auth.api.getSession({
     headers: await headers(),
@@ -38,6 +49,8 @@ export default async function DashboardPage() {
 
   const daysSinceClosing = home ? daysSince(home.closingDate) : null;
   const recommended11Month = home ? addMonths(home.closingDate, 11) : null;
+  const hasActiveEntitlement =
+    home?.entitlements.some((e) => e.status === "ACTIVE") ?? false;
 
   return (
     <div className="min-h-screen bg-gray-50 p-6 lg:p-8">
@@ -105,22 +118,27 @@ export default async function DashboardPage() {
                     <p className="mt-1 text-xs text-gray-500">Recommended — verify with your builder documents</p>
                   </div>
                 </div>
-                <div className="mt-6 flex flex-wrap gap-3">
-                  <Link
-                    href="/dashboard/issues/new"
-                    className="rounded-full bg-green px-6 py-3 font-semibold text-white hover:bg-green-600"
-                  >
-                    Report an Issue
-                  </Link>
-                  <Link
-                    href="/dashboard/documents"
-                    className="rounded-full bg-white px-6 py-3 font-semibold text-navy ring-1 ring-gray-200 hover:bg-gray-50"
-                  >
-                    Upload Documents
-                  </Link>
-                </div>
+                {hasActiveEntitlement ? (
+                  <div className="mt-6 flex flex-wrap gap-3">
+                    <Link
+                      href="/dashboard/issues/new"
+                      className="rounded-full bg-green px-6 py-3 font-semibold text-white hover:bg-green-600"
+                    >
+                      Report an Issue
+                    </Link>
+                    <Link
+                      href="/dashboard/documents"
+                      className="rounded-full bg-white px-6 py-3 font-semibold text-navy ring-1 ring-gray-200 hover:bg-gray-50"
+                    >
+                      Upload Documents
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="mt-6">{entitlementBlockedMessage}</div>
+                )}
               </div>
 
+              {hasActiveEntitlement && (
               <div className="rounded-2xl bg-navy p-6 text-white shadow-sm">
                 <h3 className="font-semibold">First checklist</h3>
                 <ul className="mt-4 space-y-3 text-sm text-gray-200">
@@ -144,6 +162,7 @@ export default async function DashboardPage() {
                   </li>
                 </ul>
               </div>
+              )}
             </div>
           </>
         )}
