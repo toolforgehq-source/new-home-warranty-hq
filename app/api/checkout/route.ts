@@ -47,6 +47,7 @@ export async function POST(request: NextRequest) {
           process.env.STRIPE_TAX_BEHAVIOR === "automatic_tax"
             ? { enabled: true }
             : undefined,
+        managed_payments: { enabled: false },
       });
 
       await prisma.purchase.update({
@@ -114,6 +115,7 @@ export async function POST(request: NextRequest) {
         process.env.STRIPE_TAX_BEHAVIOR === "automatic_tax"
           ? { enabled: true }
           : undefined,
+      managed_payments: { enabled: false },
     });
 
     await prisma.purchase.update({
