@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { stripe, STRIPE_PRICE_HOMEOWNER, STRIPE_PRICE_GIFT, APP_URL } from "@/lib/stripe";
+import { isStripeConfigured, stripe, STRIPE_PRICE_HOMEOWNER, STRIPE_PRICE_GIFT, APP_URL } from "@/lib/stripe";
 
 export async function POST(request: NextRequest) {
-  if (!process.env.STRIPE_SECRET_KEY || !STRIPE_PRICE_HOMEOWNER || !STRIPE_PRICE_GIFT) {
+  if (!isStripeConfigured() || !stripe) {
     return NextResponse.json({ error: "Stripe is not configured" }, { status: 503 });
   }
 

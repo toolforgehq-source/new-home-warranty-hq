@@ -1,16 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import Stripe from "stripe";
-import { stripe } from "@/lib/stripe";
+import { stripe, APP_URL } from "@/lib/stripe";
 import prisma from "@/lib/prisma";
 import { sendHomeownerOnboardingLink, sendPurchaseReceipt } from "@/lib/emails/purchase";
 import { sendGiftInvitation } from "@/lib/emails/gift";
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-
 export async function POST(request: NextRequest) {
   const payload = await request.text();
   const sig = request.headers.get("stripe-signature");
+
+  if (!stripe) {
+    return NextResponse.json({ error: "Stripe is not configured" }, { status: 503 });
+  }
 
   let event: Stripe.Event;
 

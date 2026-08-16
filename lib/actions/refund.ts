@@ -5,7 +5,7 @@ import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { trackEvent } from "@/lib/analytics";
 import { logAudit } from "@/lib/audit";
-import { stripe } from "@/lib/stripe";
+import { isStripeConfigured, stripe } from "@/lib/stripe";
 
 export async function processRefund(
   _prevState: { error?: string } | null,
@@ -29,18 +29,20 @@ export async function processRefund(
     return { error: "No Stripe payment intent on this purchase" };
   }
 
-  if (process.env.STRIPE_SECRET_KEY) {
-    try {
-      await stripe.refunds.create({
-        payment_intent: purchase.stripePaymentIntentId,
-        reason: "requested_by_customer",
-        metadata: { reason: reason || "" },
-      });
-    } catch (err) {
-      console.error("[refund] Stripe refund failed", err);
-      const message = err instanceof Error ? err.message : String(err);
-      return { error: `Stripe refund failed: ${message}` };
-    }
+  if (!isStripeConfigured() || !stripe) {
+    return { error: "Stripe is not configured" };
+  }
+
+  try {
+    await stripe.refunds.create({
+      payment_intent: purchase.stripePaymentIntentId,
+      reason: "requested_by_customer",
+      metadata: { reason: reason || "" },
+    });
+  } catch (err) {
+    console.error("[refund] Stripe refund failed", err);
+    const message = err instanceof Error ? err.message : String(err);
+    return { error: `Stripe refund failed: ${message}` };
   }
 
   await prisma.purchase.update({
