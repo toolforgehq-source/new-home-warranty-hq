@@ -9,15 +9,15 @@ function CheckoutContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const product = searchParams.get("product") ?? "homeowner";
-  const { data: session } = authClient.useSession();
+  const { data: session, isPending } = authClient.useSession();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (product === "gift" && session === null) {
+    if (product === "gift" && !isPending && !session) {
       router.push("/login");
     }
-  }, [product, session, router]);
+  }, [product, isPending, session, router]);
 
   const startCheckout = async (extra?: object) => {
     setLoading(true);
@@ -42,6 +42,14 @@ function CheckoutContent() {
       setLoading(false);
     }
   };
+
+  if (product === "gift" && isPending) {
+    return (
+      <div className="flex min-h-screen items-center justify-center text-gray-600">
+        Loading...
+      </div>
+    );
+  }
 
   if (product === "gift" && !session) {
     return (

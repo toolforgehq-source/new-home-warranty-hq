@@ -135,10 +135,19 @@ export async function POST(request: NextRequest) {
 
     if (event.type === "charge.refunded") {
       const charge = event.data.object as Stripe.Charge;
-      await prisma.purchase.updateMany({
+      const purchases = await prisma.purchase.findMany({
         where: { stripePaymentIntentId: charge.payment_intent as string },
-        data: { status: "REFUNDED", refundedAt: new Date() },
       });
+      for (const purchase of purchases) {
+        await prisma.purchase.update({
+          where: { id: purchase.id },
+          data: {
+            status: "REFUNDED",
+            refundedAt: new Date(),
+            refundAmount: charge.amount_refunded ?? purchase.amount,
+          },
+        });
+      }
     }
 
     if (event.type === "payment_intent.payment_failed") {

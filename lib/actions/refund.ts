@@ -25,6 +25,7 @@ export async function processRefund(
 
   if (!purchase) return { error: "Purchase not found" };
   if (purchase.status === "REFUNDED") return { error: "Already refunded" };
+  if (purchase.status !== "SUCCEEDED") return { error: "Only completed purchases can be refunded" };
   if (!purchase.stripePaymentIntentId) {
     return { error: "No Stripe payment intent on this purchase" };
   }

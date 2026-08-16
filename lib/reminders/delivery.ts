@@ -33,11 +33,15 @@ export async function deliverDueReminders() {
     const text = `Hi ${reminder.user.name || ""},\n\nThis is a reminder about ${issueTitle} at ${homeAddress}.\n\nOpen your dashboard to take action: ${dashboardUrl}\n\n— New Home Warranty HQ`;
 
     try {
-      await sendEmail({
+      const emailResult = await sendEmail({
         to: reminder.user.email,
         subject,
         text,
       });
+
+      if (emailResult && typeof emailResult === "object" && "skipped" in emailResult) {
+        throw new Error("Email not sent: Resend is not configured");
+      }
 
       await prisma.reminder.update({
         where: { id: reminder.id },
