@@ -36,7 +36,7 @@ export default async function PartnerDashboardPage() {
   const pending = gifts.filter((g) => g.status === "PAID" || g.status === "PENDING").length;
   const totalAmount = gifts.reduce((sum, g) => sum + (g.purchase?.amount ?? 0), 0);
   const publicPageUrl = `${APP_URL}/partners/${profile.slug}`;
-  const profileComplete = Boolean(profile.company && profile.phone && (profile.photoUrl || profile.logoUrl));
+  const profileComplete = Boolean(profile.company && profile.phone);
 
   const giftRows = gifts.map((g) => ({
     id: g.id,
