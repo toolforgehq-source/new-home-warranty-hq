@@ -19,6 +19,15 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  if (
+    pathname === "/onboarding" &&
+    (request.method === "POST" ||
+      request.nextUrl.searchParams.has("token") ||
+      request.nextUrl.searchParams.has("session_id"))
+  ) {
+    return NextResponse.next();
+  }
+
   const session = await auth.api.getSession({
     headers: await headers(),
   });

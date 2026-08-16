@@ -42,11 +42,15 @@ function cookieHeader(setCookies) {
 async function signUpPartner() {
   const email = testEmail("partner");
   const password = "TestPassword123!";
-  const res = await postJson("/api/auth/sign-up/email", {
-    name: "QA Partner",
-    email,
-    password,
-  });
+  const res = await postJson(
+    "/api/auth/sign-up/email",
+    {
+      name: "QA Partner",
+      email,
+      password,
+    },
+    { headers: { Origin: API_BASE } }
+  );
   if (res.status !== 200) {
     throw new Error(`Partner sign-up failed: ${res.status} ${res.text}`);
   }
