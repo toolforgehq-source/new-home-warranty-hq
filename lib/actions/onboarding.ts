@@ -46,6 +46,9 @@ export async function completeOnboarding(
   if (!purchase) {
     return { error: "Purchase record not found." };
   }
+  if (purchase.status !== "SUCCEEDED") {
+    return { error: "This purchase is not active. Please complete payment first." };
+  }
 
   try {
     const result = await auth.api.signUpEmail({

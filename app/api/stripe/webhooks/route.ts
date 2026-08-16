@@ -143,10 +143,28 @@ export async function POST(request: NextRequest) {
 
     if (event.type === "payment_intent.payment_failed") {
       const paymentIntent = event.data.object as Stripe.PaymentIntent;
-      await prisma.purchase.updateMany({
-        where: { stripePaymentIntentId: paymentIntent.id },
-        data: { status: "FAILED" },
+      const sessions = await stripe.checkout.sessions.list({
+        payment_intent: paymentIntent.id,
+        limit: 1,
       });
+      const session = sessions.data[0];
+      if (session) {
+        await prisma.purchase.updateMany({
+          where: { stripeCheckoutSessionId: session.id, status: "PENDING" },
+          data: { status: "FAILED" },
+        });
+      }
+    }
+
+    if (event.type === "checkout.session.expired") {
+      const session = event.data.object as Stripe.Checkout.Session;
+      const purchaseId = session.metadata?.purchaseId;
+      if (purchaseId) {
+        await prisma.purchase.updateMany({
+          where: { id: purchaseId, status: "PENDING" },
+          data: { status: "FAILED" },
+        });
+      }
     }
 
     return NextResponse.json({ received: true });
