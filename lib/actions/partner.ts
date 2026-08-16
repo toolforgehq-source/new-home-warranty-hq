@@ -2,6 +2,7 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { PartnerType } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
@@ -138,6 +139,8 @@ export async function updatePartnerProfile(
 
   await logAudit({ actorId: session.user.id, action: "PARTNER_PROFILE_UPDATED", entityType: "PartnerProfile", entityId: updated.id });
 
+  revalidatePath("/partner/dashboard");
+  revalidatePath("/partner/dashboard/edit");
   return { ok: true };
 }
 
