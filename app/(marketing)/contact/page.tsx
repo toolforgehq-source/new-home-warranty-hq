@@ -6,6 +6,7 @@ export const metadata = {
 };
 
 export default function ContactPage() {
+  const supportEmail = process.env.SUPPORT_EMAIL || "support@newhomewarrantyhq.com";
   return (
     <LegalPage title="Contact Us">
       <p>
@@ -15,11 +16,8 @@ export default function ContactPage() {
 
       <div className="rounded-2xl border bg-white p-6 shadow-sm">
         <p className="font-medium text-navy">Email</p>
-        <a
-          href="mailto:support@newhomewarrantyhq.com"
-          className="text-green hover:underline"
-        >
-          support@newhomewarrantyhq.com
+        <a href={`mailto:${supportEmail}`} className="text-green hover:underline">
+          {supportEmail}
         </a>
       </div>
 
