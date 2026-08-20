@@ -179,6 +179,20 @@ enum GiftPurchaseStatus {
   REDEEMED
 }
 
+enum IssueCommentDirection {
+  HOMEOWNER
+  BUILDER
+  SYSTEM
+}
+
+enum AppointmentStatus {
+  PROPOSED
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
 enum ExportFormat {
   PDF
   ZIP
@@ -228,6 +242,7 @@ model User {
   entitlements            HomeEntitlement[]
   documents               Document[]
   issues                  Issue[]
+  issueComments           IssueComment[]
   connectedEmailAccounts  ConnectedEmailAccount[]
   reminders               Reminder[]
   reminderSetting         ReminderSetting? @relation("ReminderSettingUser")
@@ -539,6 +554,7 @@ model Issue {
   repairVerifications RepairVerification[]
   statusHistory       IssueStatusHistory[]
   reminders           Reminder[]
+  comments            IssueComment[]
 
   @@index([homeId, status])
   @@index([homeId, createdAt])
@@ -546,6 +562,23 @@ model Issue {
   @@index([userId])
   @@index([status, createdAt])
   @@map("issue")
+}
+
+model IssueComment {
+  id        String                  @id @default(cuid())
+  issueId   String
+  issue     Issue                   @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  userId    String?
+  user      User?                   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  direction IssueCommentDirection
+  content   String                  @db.Text
+  emailFrom String?
+  isInternal Boolean                @default(false)
+  createdAt DateTime                @default(now())
+  updatedAt DateTime                @updatedAt
+
+  @@index([issueId, createdAt])
+  @@map("issue_comment")
 }
 
 model IssueStatusHistory {
@@ -644,9 +677,9 @@ model SubmissionAttachment {
 }
 
 model Appointment {
-  id                    String    @id @default(cuid())
+  id                    String             @id @default(cuid())
   issueId               String
-  issue                 Issue     @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  issue                 Issue              @relation(fields: [issueId], references: [id], onDelete: Cascade)
   appointmentDate       DateTime?
   builderRepresentative String?
   trade                 String?
@@ -654,10 +687,12 @@ model Appointment {
   promisedActions       String?
   partsOrdered          String?
   notes                 String?
-  missed                Boolean   @default(false)
+  status                AppointmentStatus  @default(CONFIRMED)
+  confirmationToken     String?            @unique
+  missed                Boolean            @default(false)
   completionDate        DateTime?
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
 
   @@index([issueId])
   @@index([appointmentDate])

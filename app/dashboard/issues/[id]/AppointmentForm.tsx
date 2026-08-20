@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 import { createAppointment } from "@/lib/actions/appointment";
 
-export function AppointmentForm({ issueId }: { issueId: string }) {
+export function AppointmentForm({ issueId, home }: { issueId: string; home?: { builderEmail: string | null } }) {
   const [state, action, pending] = useActionState(createAppointment, null);
 
   return (
@@ -90,6 +90,25 @@ export function AppointmentForm({ issueId }: { issueId: string }) {
           className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2.5 text-navy focus:border-green focus:outline-none focus:ring-2 focus:ring-green/20"
         />
       </div>
+
+      <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-gray-200 bg-gray-50 p-4">
+        <input
+          type="checkbox"
+          name="proposeToBuilder"
+          className="mt-1 h-4 w-4 accent-green"
+        />
+        <div>
+          <p className="text-sm font-medium text-navy">Email this appointment to the builder for confirmation</p>
+          <p className="text-xs text-gray-500">
+            The builder will receive a confirmation link and can accept the proposed date.
+          </p>
+          {!home?.builderEmail && (
+            <p className="mt-1 text-xs text-amber-600">
+              Add a builder email in Home details to use this option.
+            </p>
+          )}
+        </div>
+      </label>
 
       {state?.error && (
         <div className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{state.error}</div>

@@ -78,7 +78,15 @@ export default async function DashboardPage() {
           </>
         ) : (
           <>
-            <p className="mt-2 text-gray-600">{home.address}</p>
+            <div className="mt-2 flex items-center gap-3">
+              <p className="text-gray-600">{home.address}</p>
+              <Link
+                href="/dashboard/home"
+                className="text-sm text-green hover:underline"
+              >
+                Manage home details
+              </Link>
+            </div>
             <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
               {(["OPEN", "SUBMITTED", "SCHEDULED", "RESOLVED"] as const).map(
                 (status) => (

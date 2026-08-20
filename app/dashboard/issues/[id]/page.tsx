@@ -3,9 +3,11 @@ import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { getSignedDownloadUrl } from "@/lib/storage";
 import { SubmissionForm } from "./SubmissionForm";
 import { AppointmentForm } from "./AppointmentForm";
 import { RepairVerificationForm } from "./RepairVerificationForm";
+import { IssueCommentThread } from "./IssueCommentThread";
 
 export default async function IssueDetailPage({
   params,
@@ -26,12 +28,33 @@ export default async function IssueDetailPage({
         ],
       },
     },
-    include: { documents: true, warrantyRequests: true, statusHistory: true, submissionRecords: true, appointments: true, repairVerifications: true },
+    include: {
+      home: true,
+      documents: { orderBy: { uploadedAt: "asc" } },
+      warrantyRequests: { orderBy: { generatedAt: "desc" } },
+      statusHistory: true,
+      submissionRecords: true,
+      appointments: { orderBy: { createdAt: "desc" } },
+      repairVerifications: true,
+      comments: { orderBy: { createdAt: "asc" }, include: { user: { select: { name: true } } } },
+    },
   });
 
   if (!issue) notFound();
 
-  const approvedRequest = issue.warrantyRequests.find((r) => r.status === "APPROVED");
+  const approvedRequest = issue.warrantyRequests.find((r) => r.status === "APPROVED" || r.status === "SENT");
+
+  const photos = issue.documents.filter((d) => d.type === "ISSUE_PHOTO" && d.status === "ACTIVE");
+  const photosWithUrls = await Promise.all(
+    photos.map(async (photo) => {
+      try {
+        const url = await getSignedDownloadUrl(photo.fileKey);
+        return { ...photo, url };
+      } catch {
+        return { ...photo, url: null };
+      }
+    })
+  );
 
   return (
     <main className="p-6 lg:p-8">
@@ -61,6 +84,38 @@ export default async function IssueDetailPage({
             </div>
           )}
 
+          {photosWithUrls.length > 0 && (
+            <div className="mt-6">
+              <h2 className="text-sm font-semibold text-gray-500">Photos</h2>
+              <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {photosWithUrls.map((photo) =>
+                  photo.url ? (
+                    <a
+                      key={photo.id}
+                      href={photo.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block aspect-square overflow-hidden rounded-lg bg-gray-100"
+                    >
+                      <img
+                        src={photo.url}
+                        alt={photo.label}
+                        className="h-full w-full object-cover"
+                      />
+                    </a>
+                  ) : (
+                    <div
+                      key={photo.id}
+                      className="flex aspect-square items-center justify-center rounded-lg bg-gray-100 text-sm text-gray-500"
+                    >
+                      Photo unavailable
+                    </div>
+                  )
+                )}
+              </div>
+            </div>
+          )}
+
           <div className="mt-6 grid gap-4 sm:grid-cols-2">
             <div className="rounded-xl bg-gray-50 p-4">
               <p className="text-xs text-gray-500">Recurring</p>
@@ -78,12 +133,6 @@ export default async function IssueDetailPage({
               className="rounded-full bg-green px-6 py-3 font-semibold text-white hover:bg-green-600"
             >
               Generate Request
-            </Link>
-            <Link
-              href={`/dashboard/issues/${issue.id}/edit`}
-              className="rounded-full bg-white px-6 py-3 font-semibold text-navy ring-1 ring-gray-200 hover:bg-gray-50"
-            >
-              Edit
             </Link>
           </div>
         </div>
@@ -121,6 +170,8 @@ export default async function IssueDetailPage({
           </div>
         )}
 
+        <IssueCommentThread issueId={issue.id} comments={issue.comments} />
+
         <SubmissionForm issueId={issue.id} warrantyRequestId={approvedRequest?.id ?? null} />
 
         {issue.appointments.length > 0 && (
@@ -132,6 +183,9 @@ export default async function IssueDetailPage({
                   <div className="flex items-center justify-between">
                     <span className="font-semibold text-navy">
                       {appt.appointmentDate ? new Date(appt.appointmentDate).toLocaleDateString() : "No date"}
+                    </span>
+                    <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium capitalize text-navy">
+                      {appt.status.toLowerCase()}
                     </span>
                     {appt.missed && <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-700">Missed</span>}
                     {appt.completionDate && (
@@ -149,7 +203,7 @@ export default async function IssueDetailPage({
           </div>
         )}
 
-        <AppointmentForm issueId={issue.id} />
+        <AppointmentForm issueId={issue.id} home={issue.home} />
 
         {issue.repairVerifications.length > 0 && (
           <div className="mt-6 rounded-2xl bg-white p-6 shadow-sm">

@@ -27,6 +27,7 @@ export default function OnboardingForm({ token }: { token: string }) {
       <Field id="closingDate" name="closingDate" label="Closing date" type="date" required />
       <Field id="occupancyDate" name="occupancyDate" label="Occupancy date (optional)" type="date" />
       <Field id="builderName" name="builderName" label="Builder name" type="text" required />
+      <Field id="builderEmail" name="builderEmail" label="Builder email (optional, used for warranty requests)" type="email" placeholder="warranty@builder.com" />
 
       {state?.error && (
         <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{state.error}</div>

@@ -20,6 +20,7 @@ export async function completeOnboarding(
   const closingDate = formData.get("closingDate") as string;
   const builderName = formData.get("builderName") as string;
   const occupancyDate = formData.get("occupancyDate") as string | undefined;
+  const builderEmail = (formData.get("builderEmail") as string)?.trim() || null;
 
   if (!tokenValue || !name || !password || !address || !closingDate || !builderName) {
     return { error: "Please fill out all required fields." };
@@ -71,6 +72,7 @@ export async function completeOnboarding(
           closingDate: new Date(closingDate),
           occupancyDate: occupancyDate ? new Date(occupancyDate) : null,
           builderName,
+          builderEmail,
           giftPurchaseId: token.giftPurchaseId,
         },
       });
