@@ -4,6 +4,7 @@ import { HowItWorks } from "@/components/marketing/HowItWorks";
 import { Features } from "@/components/marketing/Features";
 import { Pricing } from "@/components/marketing/Pricing";
 import { ForPartners } from "@/components/marketing/ForPartners";
+import { Trust } from "@/components/marketing/Trust";
 import { FAQ } from "@/components/marketing/FAQ";
 
 export default function HomePage() {
@@ -15,6 +16,7 @@ export default function HomePage() {
       <Features />
       <Pricing />
       <ForPartners />
+      <Trust />
       <FAQ />
     </>
   );

@@ -66,6 +66,27 @@ export default function PartnerRegisterPage() {
             ))}
           </select>
 
+          <div className="flex items-start gap-3 rounded-lg bg-gray-50 p-3 text-sm text-gray-600">
+            <input
+              id="terms"
+              name="terms"
+              type="checkbox"
+              required
+              className="mt-0.5 h-4 w-4 rounded border-gray-300 text-green focus:ring-green"
+            />
+            <label htmlFor="terms">
+              I agree to the{" "}
+              <Link href="/terms" className="text-green hover:underline">
+                Terms of Service
+              </Link>{" "}
+              and{" "}
+              <Link href="/privacy" className="text-green hover:underline">
+                Privacy Policy
+              </Link>
+              .
+            </label>
+          </div>
+
           {state?.error && (
             <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{state.error}</div>
           )}

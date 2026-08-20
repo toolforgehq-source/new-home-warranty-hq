@@ -8,6 +8,7 @@ import prisma from "@/lib/prisma";
 import { trackEvent } from "@/lib/analytics";
 import { logAudit } from "@/lib/audit";
 import { uploadFile } from "@/lib/storage";
+import { hasActiveEntitlement } from "@/lib/entitlements";
 
 export async function uploadDocument(
   _prevState: { error?: string } | null,
@@ -26,6 +27,10 @@ export async function uploadDocument(
   });
 
   if (!home) return { error: "No home found" };
+
+  if (!(await hasActiveEntitlement(session.user.id))) {
+    return { error: "Paid access is paused. Please contact support to reactivate your account." };
+  }
 
   const file = formData.get("file") as File | null;
   const label = (formData.get("label") as string)?.trim();

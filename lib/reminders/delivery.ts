@@ -1,5 +1,6 @@
 import prisma from "@/lib/prisma";
 import { sendEmail } from "@/lib/email";
+import { APP_URL } from "@/lib/stripe";
 
 const reminderSubjects: Record<string, string> = {
   SUBMISSION_PENDING: "Reminder: submit your warranty request",
@@ -28,14 +29,19 @@ export async function deliverDueReminders() {
     const subject = reminderSubjects[reminder.type] ?? "New Home Warranty HQ Reminder";
     const issueTitle = reminder.issue?.title ?? "your issue";
     const homeAddress = reminder.home?.address ?? "your home";
-    const text = `Hi ${reminder.user.name || ""},\n\nThis is a reminder about ${issueTitle} at ${homeAddress}.\n\nOpen your dashboard to take action: http://localhost:3000/dashboard\n\n— New Home Warranty HQ`;
+    const dashboardUrl = `${APP_URL}/dashboard`;
+    const text = `Hi ${reminder.user.name || ""},\n\nThis is a reminder about ${issueTitle} at ${homeAddress}.\n\nOpen your dashboard to take action: ${dashboardUrl}\n\n— New Home Warranty HQ`;
 
     try {
-      await sendEmail({
+      const emailResult = await sendEmail({
         to: reminder.user.email,
         subject,
         text,
       });
+
+      if (emailResult && typeof emailResult === "object" && "skipped" in emailResult) {
+        throw new Error("Email not sent: Resend is not configured");
+      }
 
       await prisma.reminder.update({
         where: { id: reminder.id },

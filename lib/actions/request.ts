@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { trackEvent } from "@/lib/analytics";
 import { logAudit } from "@/lib/audit";
+import { hasActiveEntitlement } from "@/lib/entitlements";
 
 export async function generateWarrantyRequest(
   _prevState: { request?: WarrantyRequest; error?: string } | null,
@@ -32,6 +33,10 @@ export async function generateWarrantyRequest(
   });
 
   if (!issue) return { error: "Issue not found" };
+
+  if (!(await hasActiveEntitlement(session.user.id))) {
+    return { error: "Paid access is paused. Please contact support to reactivate your account." };
+  }
 
   const builderName = issue.home.builderName;
   const homeAddress = issue.home.address;
@@ -95,6 +100,10 @@ export async function approveRequest(_prevState: { error?: string } | null, form
   });
 
   if (!warrantyRequest) return { error: "Request not found" };
+
+  if (!(await hasActiveEntitlement(session.user.id))) {
+    return { error: "Paid access is paused. Please contact support to reactivate your account." };
+  }
 
   await prisma.warrantyRequest.update({
     where: { id: warrantyRequest.id },

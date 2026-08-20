@@ -37,7 +37,10 @@ export default async function AdminRefundsPage() {
                       {new Date(purchase.createdAt).toLocaleDateString()}
                     </p>
                   </div>
-                  <RefundButton purchaseId={purchase.id} disabled={purchase.status === "REFUNDED"} />
+                  <RefundButton
+                    purchaseId={purchase.id}
+                    disabled={purchase.status !== "SUCCEEDED" || !purchase.stripePaymentIntentId}
+                  />
                 </li>
               ))}
             </ul>

@@ -19,7 +19,7 @@ export function RefundButton({ purchaseId, disabled }: { purchaseId: string; dis
         disabled={disabled}
         className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-navy ring-1 ring-gray-200 hover:bg-gray-50 disabled:opacity-50"
       >
-        {disabled ? "Refunded" : "Refund"}
+        {state?.ok ? "Refunded" : disabled ? "Cannot refund" : "Refund"}
       </button>
     </form>
   );
