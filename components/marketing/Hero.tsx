@@ -68,6 +68,11 @@ function ProductPreview() {
     <div className="relative mx-auto w-full max-w-xl">
       <div className="rounded-2xl bg-white p-2 shadow-2xl">
         <div className="rounded-xl bg-gray-50 p-6 text-navy">
+          <div className="mb-2 flex items-center justify-between">
+            <span className="rounded-full bg-navy px-2 py-1 text-xs font-semibold text-white">
+              Example dashboard
+            </span>
+          </div>
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-semibold text-gray-500">

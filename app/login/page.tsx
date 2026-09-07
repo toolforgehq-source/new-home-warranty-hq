@@ -94,6 +94,13 @@ export default function LoginPage() {
           </Link>{" "}
           to get started.
         </p>
+        <p className="mt-4 text-center text-xs text-gray-400">
+          Partners can{" "}
+          <Link href="/partner/register" className="text-green hover:underline">
+            register here
+          </Link>
+          .
+        </p>
       </div>
     </div>
   );

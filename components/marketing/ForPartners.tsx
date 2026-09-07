@@ -63,6 +63,12 @@ export function ForPartners() {
               >
                 Gift It to a Buyer
               </Link>
+              <Link
+                href="/partner/register"
+                className="mt-3 block w-full rounded-full bg-white py-3.5 text-center font-semibold text-navy ring-1 ring-gray-200 hover:bg-gray-50"
+              >
+                Become a partner
+              </Link>
             </div>
           </div>
         </div>

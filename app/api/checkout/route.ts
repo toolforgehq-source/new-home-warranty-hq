@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { isStripeConfigured, stripe, STRIPE_PRICE_HOMEOWNER, STRIPE_PRICE_GIFT, APP_URL } from "@/lib/stripe";
+import { isStripeConfigured, stripe, STRIPE_PRICE_HOMEOWNER, STRIPE_PRICE_GIFT } from "@/lib/stripe";
 
 export async function POST(request: NextRequest) {
+  const origin = request.nextUrl.origin;
   if (!isStripeConfigured() || !stripe) {
     return NextResponse.json({ error: "Stripe is not configured" }, { status: 503 });
   }
@@ -39,8 +40,8 @@ export async function POST(request: NextRequest) {
       const stripeSession = await stripe.checkout.sessions.create({
         line_items: [{ price: STRIPE_PRICE_HOMEOWNER, quantity: 1 }],
         mode: "payment",
-        success_url: `${APP_URL}/onboarding?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${APP_URL}/#pricing`,
+        success_url: `${origin}/onboarding?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${origin}/#pricing`,
         client_reference_id: purchase.id,
         metadata: { productType: "HOMEOWNER", purchaseId: purchase.id },
         automatic_tax:
@@ -103,8 +104,8 @@ export async function POST(request: NextRequest) {
     const stripeSession = await stripe.checkout.sessions.create({
       line_items: [{ price: STRIPE_PRICE_GIFT, quantity: 1 }],
       mode: "payment",
-      success_url: `${APP_URL}/partner/gifts/success`,
-      cancel_url: `${APP_URL}/#pricing`,
+      success_url: `${origin}/partner/gifts/success`,
+      cancel_url: `${origin}/#pricing`,
       client_reference_id: result.giftPurchase.id,
       metadata: {
         productType: "GIFT",

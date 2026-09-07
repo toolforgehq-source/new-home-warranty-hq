@@ -85,6 +85,7 @@ export async function generateReminders() {
   // Upcoming appointments within 24 hours
   const upcomingAppointments = await prisma.appointment.findMany({
     where: {
+      status: "CONFIRMED",
       appointmentDate: {
         gte: now,
         lte: new Date(now.getTime() + 24 * 60 * 60 * 1000),
@@ -107,6 +108,7 @@ export async function generateReminders() {
   // Expected repair date passed by 1 day and not resolved
   const staleAppointments = await prisma.appointment.findMany({
     where: {
+      status: "CONFIRMED",
       expectedRepairDate: { lte: new Date(now.getTime() - 24 * 60 * 60 * 1000) },
     },
     include: { issue: { include: { home: true, repairVerifications: { orderBy: { createdAt: "desc" }, take: 1 } } } },

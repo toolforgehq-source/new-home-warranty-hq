@@ -61,9 +61,17 @@ export function Footer() {
                   Privacy
                 </Link>
               </li>
+              <li>
+                <Link href="/refund" className="hover:text-white">
+                  Refunds
+                </Link>
+              </li>
             </ul>
           </div>
         </div>
+        <p className="mt-8 text-center text-xs text-white/40">
+          New Home Warranty HQ is a software tool, not a warranty provider, insurer, or law firm.
+        </p>
         <div className="mt-12 border-t border-white/10 pt-8 text-sm text-white/50">
           &copy; {new Date().getFullYear()} New Home Warranty HQ. All rights
           reserved.

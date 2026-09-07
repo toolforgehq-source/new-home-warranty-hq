@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { trackEvent } from "@/lib/analytics";
 import { logAudit } from "@/lib/audit";
+import { hasActiveEntitlement } from "@/lib/entitlements";
 
 export async function createFinalReview(
   _prevState: { error?: string } | null,
@@ -31,6 +32,10 @@ export async function createFinalReview(
   });
 
   if (!home) return { error: "Home not found" };
+
+  if (!(await hasActiveEntitlement(session.user.id))) {
+    return { error: "Paid access is paused. Please contact support to reactivate your account." };
+  }
 
   const openIssues = home.issues.filter((i) => i.status === "OPEN");
   const unresolvedIssues = home.issues.filter((i) => i.status === "SUBMITTED" || i.status === "SCHEDULED");

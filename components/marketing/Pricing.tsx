@@ -85,7 +85,11 @@ export function Pricing() {
         </div>
 
         <p className="mt-8 text-center text-sm text-gray-500">
-          30-day satisfaction guarantee. No subscription.
+          30-day satisfaction guarantee. No subscription.{" "}
+          <Link href="/refund" className="text-green hover:underline">
+            See refund policy
+          </Link>
+          .
         </p>
       </div>
     </section>

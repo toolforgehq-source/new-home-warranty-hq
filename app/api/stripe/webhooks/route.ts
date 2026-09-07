@@ -5,6 +5,7 @@ import { stripe, APP_URL } from "@/lib/stripe";
 import prisma from "@/lib/prisma";
 import { sendHomeownerOnboardingLink, sendPurchaseReceipt } from "@/lib/emails/purchase";
 import { sendGiftInvitation } from "@/lib/emails/gift";
+import { revokeEntitlementsAndInvalidateUnredeemedTokensForPurchase } from "@/lib/entitlements";
 
 export async function POST(request: NextRequest) {
   const payload = await request.text();
@@ -135,10 +136,20 @@ export async function POST(request: NextRequest) {
 
     if (event.type === "charge.refunded") {
       const charge = event.data.object as Stripe.Charge;
-      await prisma.purchase.updateMany({
+      const purchases = await prisma.purchase.findMany({
         where: { stripePaymentIntentId: charge.payment_intent as string },
-        data: { status: "REFUNDED", refundedAt: new Date() },
       });
+      for (const purchase of purchases) {
+        await prisma.purchase.update({
+          where: { id: purchase.id },
+          data: {
+            status: "REFUNDED",
+            refundedAt: new Date(),
+            refundAmount: charge.amount_refunded ?? purchase.amount,
+          },
+        });
+        await revokeEntitlementsAndInvalidateUnredeemedTokensForPurchase(purchase.id);
+      }
     }
 
     if (event.type === "payment_intent.payment_failed") {

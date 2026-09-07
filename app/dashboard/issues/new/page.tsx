@@ -1,8 +1,10 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import Link from "next/link";
 import { createIssue } from "@/lib/actions/issue";
+
+const MAX_PHOTO_SIZE = 10 * 1024 * 1024;
 
 const categories = [
   { value: "EXTERIOR", label: "Exterior" },
@@ -29,6 +31,27 @@ const categories = [
 
 export default function NewIssuePage() {
   const [state, action, pending] = useActionState(createIssue, null);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+    if (files.length > 10) {
+      setPhotoError("You can upload up to 10 photos.");
+      e.target.value = "";
+      return;
+    }
+    for (const file of files) {
+      if (file.size > MAX_PHOTO_SIZE) {
+        setPhotoError("Each photo must be smaller than 10 MB.");
+        e.target.value = "";
+        return;
+      }
+    }
+    setPhotoError(null);
+  };
+
+  const error = state?.error || photoError;
 
   return (
     <main className="p-6 lg:p-8">
@@ -112,6 +135,22 @@ export default function NewIssuePage() {
             />
           </div>
 
+          <div>
+            <label htmlFor="photos" className="block text-sm font-medium text-navy">
+              Photos
+            </label>
+            <input
+              id="photos"
+              name="photos"
+              type="file"
+              multiple
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              onChange={handlePhotoChange}
+              className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2.5 text-navy file:mr-4 file:rounded-lg file:border-0 file:bg-gray-100 file:px-3 file:py-2 file:text-sm file:font-medium"
+            />
+            <p className="mt-1 text-xs text-gray-500">Upload up to 10 JPEG, PNG, WebP, or GIF images.</p>
+          </div>
+
           <div className="flex gap-6">
             <label className="flex items-center gap-2 text-sm text-navy">
               <input type="checkbox" name="isRecurring" className="h-4 w-4 accent-green" />
@@ -153,8 +192,8 @@ export default function NewIssuePage() {
             </div>
           </details>
 
-          {state?.error && (
-            <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{state.error}</div>
+          {error && (
+            <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</div>
           )}
 
           <button

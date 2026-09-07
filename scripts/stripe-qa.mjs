@@ -16,7 +16,7 @@ const Stripe = (await import("stripe")).default;
 const stripe = new Stripe(stripeSecret, { typescript: true });
 const prisma = new PrismaClient();
 
-const testEmail = (prefix) => `${prefix}-${Date.now()}@example.com`;
+const testEmail = (prefix) => `delivered+${prefix}-${Date.now()}@resend.dev`;
 
 async function postJson(path, body, opts = {}) {
   const res = await fetch(`${API_BASE}${path}`, {

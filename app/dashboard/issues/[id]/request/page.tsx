@@ -1,24 +1,38 @@
-"use client";
-
-import { useActionState, use } from "react";
+import { headers } from "next/headers";
+import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
-import { generateWarrantyRequest, approveRequest } from "@/lib/actions/request";
+import { auth } from "@/lib/auth";
+import prisma from "@/lib/prisma";
+import { RequestActions } from "./RequestActions";
 
-export default function RequestPage({
+export default async function RequestPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = use(params);
-  const [genState, genAction, genPending] = useActionState(generateWarrantyRequest, null);
-  const [approveState, approveAction, approvePending] = useActionState(approveRequest, null);
+  const { id } = await params;
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) redirect("/login");
 
-  const request = genState?.request;
-  const approved = !!approveState?.ok;
+  const issue = await prisma.issue.findFirst({
+    where: {
+      id,
+      home: {
+        OR: [
+          { primaryOwnerId: session.user.id },
+          { memberships: { some: { userId: session.user.id } } },
+        ],
+      },
+    },
+    include: {
+      home: { select: { builderName: true, builderEmail: true } },
+      warrantyRequests: { orderBy: { generatedAt: "desc" }, take: 1 },
+    },
+  });
 
-  const mailtoSubject = `Warranty request: ${request?.generatedContent?.split("\n")[2]?.replace("Issue: ", "") || "Home warranty issue"}`;
-  const mailtoBody = request?.generatedContent || "";
-  const mailtoHref = `mailto:?subject=${encodeURIComponent(mailtoSubject)}&body=${encodeURIComponent(mailtoBody)}`;
+  if (!issue) notFound();
+
+  const latestRequest = issue.warrantyRequests[0] ?? null;
 
   return (
     <main className="p-6 lg:p-8">
@@ -31,92 +45,11 @@ export default function RequestPage({
           Review the request before sending it to your builder. All builder-facing communication comes from you.
         </p>
 
-        {!request ? (
-          <form action={genAction} className="mt-6 space-y-4">
-            <input type="hidden" name="issueId" value={id} />
-            <div>
-              <label htmlFor="requestedNextStep" className="block text-sm font-medium text-navy">
-                Requested next step
-              </label>
-              <textarea
-                id="requestedNextStep"
-                name="requestedNextStep"
-                rows={3}
-                defaultValue="Please inspect and advise on the appropriate warranty process."
-                className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2.5 text-navy focus:border-green focus:outline-none focus:ring-2 focus:ring-green/20"
-              />
-            </div>
-            {genState?.error && (
-              <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{genState.error}</div>
-            )}
-            <button
-              type="submit"
-              disabled={genPending}
-              className="rounded-full bg-green px-6 py-3 font-semibold text-white hover:bg-green-600 disabled:opacity-70"
-            >
-              {genPending ? "Generating..." : "Generate Request"}
-            </button>
-          </form>
-        ) : (
-          <div className="mt-6 rounded-2xl bg-white p-6 shadow-sm">
-            <h2 className="font-semibold text-navy">Preview</h2>
-            <pre className="mt-4 max-h-96 overflow-auto whitespace-pre-wrap rounded-lg bg-gray-50 p-4 text-sm text-navy">
-              {request.generatedContent}
-            </pre>
-
-            {!approved ? (
-              <form action={approveAction} className="mt-6 space-y-4">
-                <input type="hidden" name="requestId" value={request.id} />
-                {approveState?.error && (
-                  <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{approveState.error}</div>
-                )}
-                <button
-                  type="submit"
-                  disabled={approvePending}
-                  className="rounded-full bg-green px-6 py-3 font-semibold text-white hover:bg-green-600 disabled:opacity-70"
-                >
-                  {approvePending ? "Approving..." : "Looks good — approve request"}
-                </button>
-              </form>
-            ) : (
-              <div className="mt-6 flex flex-wrap gap-3">
-                <a
-                  href={mailtoHref}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="rounded-full bg-green px-6 py-3 font-semibold text-white hover:bg-green-600"
-                >
-                  Open in my email app
-                </a>
-                <button
-                  type="button"
-                  onClick={() => navigator.clipboard.writeText(request.generatedContent)}
-                  className="rounded-full bg-white px-6 py-3 font-semibold text-navy ring-1 ring-gray-200 hover:bg-gray-50"
-                >
-                  Copy to clipboard
-                </button>
-                <a
-                  href={`/api/reports/request/${request.id}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="rounded-full bg-white px-6 py-3 font-semibold text-navy ring-1 ring-gray-200 hover:bg-gray-50"
-                >
-                  Download PDF
-                </a>
-                <div className="w-full rounded-lg bg-gray-50 p-4 text-sm text-gray-600">
-                  <p className="font-semibold text-navy">Portal mode</p>
-                  <p>Copy these fields if your builder requires an online submission:</p>
-                  <dl className="mt-2 grid gap-2 sm:grid-cols-2">
-                    <div>
-                      <dt className="text-xs text-gray-500">Description</dt>
-                      <dd className="max-h-24 overflow-auto font-medium text-navy">{request.generatedContent}</dd>
-                    </div>
-                  </dl>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+        <RequestActions
+          issueId={id}
+          home={issue.home}
+          initialRequest={latestRequest}
+        />
       </div>
     </main>
   );

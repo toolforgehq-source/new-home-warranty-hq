@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { sendWelcomeEmail } from "@/lib/emails/welcome";
+import { sendGiftRedemptionConfirmation } from "@/lib/emails/gift";
 import { trackEvent } from "@/lib/analytics";
 import { logAudit } from "@/lib/audit";
 
@@ -19,6 +20,7 @@ export async function completeOnboarding(
   const closingDate = formData.get("closingDate") as string;
   const builderName = formData.get("builderName") as string;
   const occupancyDate = formData.get("occupancyDate") as string | undefined;
+  const builderEmail = (formData.get("builderEmail") as string)?.trim() || null;
 
   if (!tokenValue || !name || !password || !address || !closingDate || !builderName) {
     return { error: "Please fill out all required fields." };
@@ -28,7 +30,7 @@ export async function completeOnboarding(
     where: { token: tokenValue },
     include: {
       purchase: true,
-      giftPurchase: { include: { purchase: true } },
+      giftPurchase: { include: { purchase: true, partner: true } },
     },
   });
 
@@ -70,6 +72,7 @@ export async function completeOnboarding(
           closingDate: new Date(closingDate),
           occupancyDate: occupancyDate ? new Date(occupancyDate) : null,
           builderName,
+          builderEmail,
           giftPurchaseId: token.giftPurchaseId,
         },
       });
@@ -124,6 +127,12 @@ export async function completeOnboarding(
     const home = await prisma.home.findFirst({ where: { primaryOwnerId: user.id }, orderBy: { createdAt: "desc" } });
     if (home) {
       await sendWelcomeEmail({ to: token.email, name, address: home.address });
+      if (token.giftPurchaseId && token.giftPurchase?.partner?.email) {
+        await sendGiftRedemptionConfirmation({
+          to: token.giftPurchase.partner.email,
+          recipientEmail: token.email,
+        });
+      }
       await trackEvent({ event: "account_activated", userId: user.id, properties: { homeId: home.id } });
       await logAudit({ actorId: user.id, action: "ONBOARDING_COMPLETED", entityType: "Home", entityId: home.id });
     }

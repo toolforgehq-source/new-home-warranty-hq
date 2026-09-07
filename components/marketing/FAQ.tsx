@@ -46,7 +46,19 @@ const faqs = [
   },
   {
     q: "Can someone gift this to me?",
-    a: "Yes.",
+    a: "Yes. A partner such as a realtor or lender can purchase a $124 gift. You will receive an email to set up your account at no additional cost.",
+  },
+  {
+    q: "What is your refund policy?",
+    a: "We offer a 30-day satisfaction guarantee. A full refund revokes paid access, but your records remain available to view. Gift purchases may be refunded before they are redeemed.",
+  },
+  {
+    q: "Is my data private?",
+    a: "Yes. Your home, issues, and documents are scoped to your account. Partners who gift the product cannot see your private information.",
+  },
+  {
+    q: "What payment methods do you accept?",
+    a: "We accept major credit and debit cards through Stripe. We do not store your card details.",
   },
 ];
 

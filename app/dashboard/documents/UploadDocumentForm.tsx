@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { uploadDocument } from "@/lib/actions/document";
 
 const documentTypes = [
@@ -16,8 +16,23 @@ const documentTypes = [
   { value: "OTHER", label: "Other" },
 ];
 
+const MAX_SIZE = 10 * 1024 * 1024;
+
 export function UploadDocumentForm() {
   const [state, action, pending] = useActionState(uploadDocument, null);
+  const [fileError, setFileError] = useState<string | null>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && file.size > MAX_SIZE) {
+      setFileError("File must be smaller than 10 MB");
+      e.target.value = "";
+    } else {
+      setFileError(null);
+    }
+  };
+
+  const error = fileError || state?.error;
 
   return (
     <form action={action} className="mt-6 rounded-2xl bg-white p-6 shadow-sm">
@@ -62,18 +77,20 @@ export function UploadDocumentForm() {
             type="file"
             required
             accept=".pdf,.jpg,.jpeg,.png,.gif,.webp"
+            onChange={handleFileChange}
             className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2.5 text-navy file:mr-4 file:rounded-lg file:border-0 file:bg-gray-100 file:px-3 file:py-2 file:text-sm file:font-medium"
           />
+          {fileError && <p className="mt-1 text-sm text-red-600">{fileError}</p>}
         </div>
       </div>
 
-      {state?.error && (
-        <div className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{state.error}</div>
+      {error && !fileError && (
+        <div className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</div>
       )}
 
       <button
         type="submit"
-        disabled={pending}
+        disabled={pending || !!fileError}
         className="mt-6 rounded-full bg-green px-6 py-3 font-semibold text-white hover:bg-green-600 disabled:opacity-70"
       >
         {pending ? "Uploading..." : "Upload document"}
