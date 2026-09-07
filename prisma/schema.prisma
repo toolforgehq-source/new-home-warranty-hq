@@ -565,17 +565,18 @@ model Issue {
 }
 
 model IssueComment {
-  id        String                  @id @default(cuid())
-  issueId   String
-  issue     Issue                   @relation(fields: [issueId], references: [id], onDelete: Cascade)
-  userId    String?
-  user      User?                   @relation(fields: [userId], references: [id], onDelete: SetNull)
-  direction IssueCommentDirection
-  content   String                  @db.Text
-  emailFrom String?
-  isInternal Boolean                @default(false)
-  createdAt DateTime                @default(now())
-  updatedAt DateTime                @updatedAt
+  id         String                  @id @default(cuid())
+  issueId    String
+  issue      Issue                   @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  userId     String?
+  user       User?                   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  direction  IssueCommentDirection
+  content    String                  @db.Text
+  emailFrom  String?
+  externalId String?                 @unique
+  isInternal Boolean                 @default(false)
+  createdAt  DateTime                @default(now())
+  updatedAt  DateTime                @updatedAt
 
   @@index([issueId, createdAt])
   @@map("issue_comment")

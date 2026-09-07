@@ -72,7 +72,6 @@ export async function logBuilderReply(_prevState: { error?: string } | null, for
   await prisma.issueComment.create({
     data: {
       issueId,
-      userId: session.user.id,
       direction: "BUILDER",
       content,
       emailFrom,

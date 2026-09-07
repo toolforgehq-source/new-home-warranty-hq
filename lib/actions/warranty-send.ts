@@ -7,6 +7,7 @@ import type { ReactElement } from "react";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { sendEmail } from "@/lib/email";
+import { getIssueReplyAddress } from "@/lib/inbound";
 import { WarrantyRequestPDF } from "@/lib/pdf/warranty-request";
 import { getSignedDownloadUrl } from "@/lib/storage";
 import { hasActiveEntitlement } from "@/lib/entitlements";
@@ -103,8 +104,9 @@ export async function sendWarrantyRequestToBuilder(
   ];
 
   const subject = `Warranty request: ${issueTitle} at ${warrantyRequest.home.address}`;
-  const text = `Dear ${warrantyRequest.home.builderName} Warranty Department,\n\nPlease see the attached warranty request and photos regarding the above property.\n\nRequested next step:\n${warrantyRequest.requestedNextStep || "Please inspect and advise on the appropriate warranty process."}\n\nPlease reply directly to ${homeownerEmail} with your response.\n\n— New Home Warranty HQ (on behalf of ${homeownerName})`;
-  const html = `<p>Dear ${escapeHtml(warrantyRequest.home.builderName)} Warranty Department,</p><p>Please see the attached warranty request and photos regarding <strong>${escapeHtml(warrantyRequest.home.address)}</strong>.</p><p>Requested next step:<br/>${escapeHtml(warrantyRequest.requestedNextStep || "Please inspect and advise on the appropriate warranty process.")}</p><p>Please reply directly to <a href="mailto:${escapeHtml(homeownerEmail)}">${escapeHtml(homeownerEmail)}</a> with your response.</p><p>— New Home Warranty HQ (on behalf of ${escapeHtml(homeownerName)})</p>`;
+  const replyToAddress = warrantyRequest.issueId ? getIssueReplyAddress(warrantyRequest.issueId) : homeownerEmail;
+  const text = `Dear ${warrantyRequest.home.builderName} Warranty Department,\n\nPlease see the attached warranty request and photos regarding the above property.\n\nRequested next step:\n${warrantyRequest.requestedNextStep || "Please inspect and advise on the appropriate warranty process."}\n\nPlease reply directly to this email with your response. Your reply will be recorded in the homeowner's warranty dashboard and forwarded to ${homeownerEmail}.\n\n— New Home Warranty HQ (on behalf of ${homeownerName})`;
+  const html = `<p>Dear ${escapeHtml(warrantyRequest.home.builderName)} Warranty Department,</p><p>Please see the attached warranty request and photos regarding <strong>${escapeHtml(warrantyRequest.home.address)}</strong>.</p><p>Requested next step:<br/>${escapeHtml(warrantyRequest.requestedNextStep || "Please inspect and advise on the appropriate warranty process.")}</p><p>Please reply directly to this email with your response. Your reply will be recorded in the homeowner's warranty dashboard and forwarded to ${escapeHtml(homeownerEmail)}.</p><p>— New Home Warranty HQ (on behalf of ${escapeHtml(homeownerName)})</p>`;
 
   try {
     await sendEmail({
@@ -113,7 +115,7 @@ export async function sendWarrantyRequestToBuilder(
       subject,
       text,
       html,
-      replyTo: homeownerEmail,
+      replyTo: replyToAddress,
       attachments,
     });
   } catch (err) {

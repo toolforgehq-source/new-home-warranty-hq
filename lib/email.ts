@@ -47,6 +47,6 @@ export async function sendEmail({
     throw new Error(result.error.message);
   }
 
-  console.log("[email] sent", { to, cc, subject, id: result.data?.id });
+  console.log("[email] sent", { to, cc, replyTo, subject, id: result.data?.id });
   return result;
 }
