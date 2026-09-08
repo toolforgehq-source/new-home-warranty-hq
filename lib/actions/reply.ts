@@ -57,14 +57,19 @@ export async function replyToBuilder(_prevState: { error?: string } | null, form
         )
       )
     );
-    await sendEmail({
-      to: builderEmail,
-      cc,
-      subject,
-      text: `${content}\n\n— ${fromName}\nReply to this email to keep the conversation recorded in New Home Warranty HQ.`,
-      html: `<div style="font-family: sans-serif; padding: 16px;"><p style="white-space: pre-line;">${escapeHtml(content)}</p><hr/><p>— ${escapeHtml(fromName)}<br/>Reply to this email to keep the conversation recorded in New Home Warranty HQ.</p></div>`,
-      replyTo: getIssueReplyAddress(issue.id),
-    });
+    try {
+      await sendEmail({
+        to: builderEmail,
+        cc,
+        subject,
+        text: `${content}\n\n— ${fromName}\nReply to this email to keep the conversation recorded in New Home Warranty HQ.`,
+        html: `<div style="font-family: sans-serif; padding: 16px;"><p style="white-space: pre-line;">${escapeHtml(content)}</p><hr/><p>— ${escapeHtml(fromName)}<br/>Reply to this email to keep the conversation recorded in New Home Warranty HQ.</p></div>`,
+        replyTo: getIssueReplyAddress(issue.id),
+      });
+    } catch (err) {
+      console.error("[replyToBuilder] email failed", err);
+      return { error: `Your reply was saved, but the email to the builder could not be sent: ${err instanceof Error ? err.message : "Unknown error"}` };
+    }
   }
 
   await trackEvent({ event: "issue_reply_sent", userId: session.user.id, properties: { issueId } });
