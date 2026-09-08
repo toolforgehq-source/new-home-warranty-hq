@@ -209,32 +209,40 @@ export async function processInboundEmail(event: InboundWebhookEvent) {
   if (direction === "BUILDER") {
     const [to, ...cc] = homeownerEmails;
     if (to) {
-      await sendEmail({
-        to,
-        cc,
-        subject: `Re: ${inbound.subject}`,
-        text: `${content}\n\n— Forwarded from ${fromName}\nReply to this email to respond directly to your builder. Your message will be logged in New Home Warranty HQ.`,
-        html: inboundHtml
-          ? `<div style="font-family: sans-serif; padding: 16px;">${inboundHtml}<hr/><p style="color:#666;">Forwarded from ${fromName}<br/>Reply to this email to respond directly to your builder. Your message will be logged in New Home Warranty HQ.</p></div>`
-          : undefined,
-        replyTo: matchedTo,
-        attachments,
-      });
+      try {
+        await sendEmail({
+          to,
+          cc,
+          subject: `Re: ${inbound.subject}`,
+          text: `${content}\n\n— Forwarded from ${fromName}\nReply to this email to respond directly to your builder. Your message will be logged in New Home Warranty HQ.`,
+          html: inboundHtml
+            ? `<div style="font-family: sans-serif; padding: 16px;">${inboundHtml}<hr/><p style="color:#666;">Forwarded from ${fromName}<br/>Reply to this email to respond directly to your builder. Your message will be logged in New Home Warranty HQ.</p></div>`
+            : undefined,
+          replyTo: matchedTo,
+          attachments,
+        });
+      } catch (err) {
+        console.error("[inbound] failed to forward builder reply to homeowner", err);
+      }
     }
   } else if (direction === "HOMEOWNER") {
     const to = issue.home.builderEmail;
     if (to) {
-      await sendEmail({
-        to,
-        cc: homeownerEmails,
-        subject: `Re: ${inbound.subject}`,
-        text: `${content}\n\n— Forwarded from ${issue.home.primaryOwner?.name || "Homeowner"}\nReply to this email to respond directly to the homeowner. Your message will be logged in New Home Warranty HQ.`,
-        html: inboundHtml
-          ? `<div style="font-family: sans-serif; padding: 16px;">${inboundHtml}<hr/><p style="color:#666;">Forwarded from ${issue.home.primaryOwner?.name || "Homeowner"}<br/>Reply to this email to respond directly to the homeowner. Your message will be logged in New Home Warranty HQ.</p></div>`
-          : undefined,
-        replyTo: matchedTo,
-        attachments,
-      });
+      try {
+        await sendEmail({
+          to,
+          cc: homeownerEmails,
+          subject: `Re: ${inbound.subject}`,
+          text: `${content}\n\n— Forwarded from ${issue.home.primaryOwner?.name || "Homeowner"}\nReply to this email to respond directly to the homeowner. Your message will be logged in New Home Warranty HQ.`,
+          html: inboundHtml
+            ? `<div style="font-family: sans-serif; padding: 16px;">${inboundHtml}<hr/><p style="color:#666;">Forwarded from ${issue.home.primaryOwner?.name || "Homeowner"}<br/>Reply to this email to respond directly to the homeowner. Your message will be logged in New Home Warranty HQ.</p></div>`
+            : undefined,
+          replyTo: matchedTo,
+          attachments,
+        });
+      } catch (err) {
+        console.error("[inbound] failed to forward homeowner reply to builder", err);
+      }
     }
   }
 
