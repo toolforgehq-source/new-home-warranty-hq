@@ -1,8 +1,13 @@
 import prisma from "@/lib/prisma";
 
 export async function hasActiveEntitlement(userId: string): Promise<boolean> {
+  const now = new Date();
   const entitlement = await prisma.homeEntitlement.findFirst({
-    where: { userId, status: "ACTIVE" },
+    where: {
+      userId,
+      status: "ACTIVE",
+      OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+    },
   });
   return !!entitlement;
 }

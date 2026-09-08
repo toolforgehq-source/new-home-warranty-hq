@@ -50,14 +50,26 @@ export async function replyToBuilder(_prevState: { error?: string } | null, form
   if (builderEmail) {
     const fromName = session.user.name || issue.home.primaryOwner?.name || "Homeowner";
     const subject = `Re: Warranty request: ${issue.title} at ${issue.home.address}`;
-    await sendEmail({
-      to: builderEmail,
-      cc: [issue.user?.email, ...issue.home.memberships.map((m) => m.user.email)].filter(Boolean) as string[],
-      subject,
-      text: `${content}\n\n— ${fromName}\nReply to this email to keep the conversation recorded in New Home Warranty HQ.`,
-      html: `<div style="font-family: sans-serif; padding: 16px;"><p style="white-space: pre-line;">${escapeHtml(content)}</p><hr/><p>— ${escapeHtml(fromName)}<br/>Reply to this email to keep the conversation recorded in New Home Warranty HQ.</p></div>`,
-      replyTo: getIssueReplyAddress(issue.id),
-    });
+    const cc = Array.from(
+      new Set(
+        [issue.home.primaryOwner?.email, issue.user?.email, ...issue.home.memberships.map((m) => m.user.email)].filter(
+          (e): e is string => Boolean(e)
+        )
+      )
+    );
+    try {
+      await sendEmail({
+        to: builderEmail,
+        cc,
+        subject,
+        text: `${content}\n\n— ${fromName}\nReply to this email to keep the conversation recorded in New Home Warranty HQ.`,
+        html: `<div style="font-family: sans-serif; padding: 16px;"><p style="white-space: pre-line;">${escapeHtml(content)}</p><hr/><p>— ${escapeHtml(fromName)}<br/>Reply to this email to keep the conversation recorded in New Home Warranty HQ.</p></div>`,
+        replyTo: getIssueReplyAddress(issue.id),
+      });
+    } catch (err) {
+      console.error("[replyToBuilder] email failed", err);
+      return { error: `Your reply was saved, but the email to the builder could not be sent: ${err instanceof Error ? err.message : "Unknown error"}` };
+    }
   }
 
   await trackEvent({ event: "issue_reply_sent", userId: session.user.id, properties: { issueId } });
@@ -71,7 +83,10 @@ export async function suggestReply(_prevState: { suggestion?: string; error?: st
   if (!session) return { error: "Not authenticated" };
 
   const issueId = formData.get("issueId") as string;
-  const builderMessage = (formData.get("builderMessage") as string)?.trim() || undefined;
+  const builderMessage =
+    (formData.get("builderMessage") as string)?.trim() ||
+    (formData.get("content") as string)?.trim() ||
+    undefined;
 
   if (!issueId) return { error: "Issue ID is required." };
 
