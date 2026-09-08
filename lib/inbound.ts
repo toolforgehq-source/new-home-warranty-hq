@@ -23,6 +23,13 @@ export function parseIssueIdFromEmail(to: string, domain = inboundDomain): strin
   return localPart.replace("issue-", "");
 }
 
+export function parseEmailAddress(raw: string | null | undefined): string {
+  if (!raw) return "";
+  const cleaned = raw.trim().toLowerCase();
+  const match = cleaned.match(/<([^>]+)>/);
+  return match ? match[1] : cleaned;
+}
+
 function stripHtml(html: string): string {
   return html
     .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
@@ -125,11 +132,13 @@ export async function processInboundEmail(event: InboundWebhookEvent) {
 
   const from = (inbound.from || "").trim().toLowerCase();
   const fromName = inbound.from || "Unknown";
-  const fromAddress = from.replace(/.*<([^>]+)>.*/, "$1");
+  const fromAddress = parseEmailAddress(inbound.from);
+  const appEmailAddress = parseEmailAddress(fromEmail);
   const fromOurDomain =
-    fromEmail.toLowerCase().includes(from) ||
-    fromAddress.endsWith(`@${inboundDomain.toLowerCase()}`) ||
-    fromAddress.endsWith(".resend.app");
+    !!appEmailAddress &&
+    (fromAddress === appEmailAddress ||
+      from === appEmailAddress ||
+      from.endsWith(`<${appEmailAddress}>`));
   if (fromOurDomain) {
     return { skipped: true, reason: "Ignored email from ourselves" };
   }
