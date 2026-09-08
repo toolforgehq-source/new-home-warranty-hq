@@ -14,6 +14,7 @@ export function IssueCommentThread({
     direction: string;
     content: string;
     emailFrom: string | null;
+    isInternal: boolean;
     createdAt: Date;
     user: { name: string } | null;
   }[];
@@ -50,6 +51,7 @@ export function IssueCommentThread({
               <div className="flex items-center justify-between">
                 <span className="font-semibold capitalize text-navy">
                   {comment.direction.toLowerCase()}
+                  {comment.isInternal && <span className="ml-1 text-xs font-normal text-amber-600">(internal)</span>}
                   {comment.user && ` — ${comment.user.name}`}
                   {comment.emailFrom && ` — ${comment.emailFrom}`}
                 </span>
@@ -115,6 +117,7 @@ export function IssueCommentThread({
 
       <form action={noteAction} className="mt-8 space-y-3 border-t border-gray-100 pt-6">
         <input type="hidden" name="issueId" value={issueId} />
+        <input type="hidden" name="isInternal" value="true" />
         <label htmlFor="homeowner-comment" className="block text-sm font-medium text-navy">
           Add an internal note
         </label>

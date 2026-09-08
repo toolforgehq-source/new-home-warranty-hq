@@ -21,14 +21,16 @@ export async function generateReplySuggestion({ issueId, builderMessage }: Sugge
   });
   if (!issue) throw new Error("Issue not found.");
 
+  const visibleComments = issue.comments.filter((c) => !c.isInternal);
+
   const lastBuilderComment =
     builderMessage ||
-    issue.comments
+    visibleComments
       .filter((c) => c.direction === "BUILDER")
       .slice(-1)[0]?.content ||
     "";
 
-  const threadSummary = issue.comments
+  const threadSummary = visibleComments
     .map((c) => `${c.direction}: ${c.content.slice(0, 200)}${c.content.length > 200 ? "..." : ""}`)
     .join("\n");
 
