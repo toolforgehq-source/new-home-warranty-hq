@@ -71,17 +71,25 @@ export async function POST(request: NextRequest) {
           });
         });
 
-        await sendPurchaseReceipt({
-          to: email,
-          amount: purchase.amount,
-          product: "New Home Warranty HQ",
-        });
+        try {
+          await sendHomeownerOnboardingLink({
+            to: email,
+            token: onboardingToken.token,
+            appUrl: APP_URL,
+          });
+        } catch (err) {
+          console.error("[stripe webhook] onboarding email failed", { purchaseId: purchase.id }, err);
+        }
 
-        await sendHomeownerOnboardingLink({
-          to: email,
-          token: onboardingToken.token,
-          appUrl: APP_URL,
-        });
+        try {
+          await sendPurchaseReceipt({
+            to: email,
+            amount: purchase.amount,
+            product: "New Home Warranty HQ",
+          });
+        } catch (err) {
+          console.error("[stripe webhook] receipt email failed", { purchaseId: purchase.id }, err);
+        }
       }
 
       if (productType === "GIFT") {
@@ -125,12 +133,16 @@ export async function POST(request: NextRequest) {
           });
         });
 
-        await sendGiftInvitation({
-          to: giftPurchase.recipientEmail,
-          buyerName: giftPurchase.partner.name,
-          buyerCompany: null,
-          redemptionUrl: `${APP_URL}/onboarding?token=${onboardingToken.token}`,
-        });
+        try {
+          await sendGiftInvitation({
+            to: giftPurchase.recipientEmail,
+            buyerName: giftPurchase.partner.name,
+            buyerCompany: null,
+            redemptionUrl: `${APP_URL}/onboarding?token=${onboardingToken.token}`,
+          });
+        } catch (err) {
+          console.error("[stripe webhook] gift invitation email failed", { giftPurchaseId: giftPurchase.id }, err);
+        }
       }
     }
 

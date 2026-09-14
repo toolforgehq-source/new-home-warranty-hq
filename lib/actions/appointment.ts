@@ -8,6 +8,7 @@ import { trackEvent } from "@/lib/analytics";
 import { logAudit } from "@/lib/audit";
 import { hasActiveEntitlement } from "@/lib/entitlements";
 import { sendEmail } from "@/lib/email";
+import { getIssueReplyAddress } from "@/lib/inbound";
 import { APP_URL } from "@/lib/stripe";
 
 export async function createAppointment(
@@ -71,8 +72,8 @@ export async function createAppointment(
     const homeownerName = issue.user?.name || session.user.name;
     const homeownerEmail = issue.user?.email || session.user.email;
     const subject = `Appointment request: ${issue.title} at ${issue.home.address}`;
-    const text = `Hello,\n\n${homeownerName} has requested an appointment to address the following issue at ${issue.home.address}:\n\n${issue.title}\n\nProposed date: ${appointment.appointmentDate ? new Date(appointment.appointmentDate).toLocaleDateString() : "To be scheduled"}\n\nPlease confirm the appointment by clicking this link:\n${confirmUrl}\n\nIf the date does not work, please reply directly to ${homeownerEmail}.\n\n— New Home Warranty HQ`;
-    const html = `<p>Hello,</p><p>${escapeHtml(homeownerName ?? "The homeowner")} has requested an appointment to address the following issue at <strong>${escapeHtml(issue.home.address)}</strong>:</p><p>${escapeHtml(issue.title)}</p><p>Proposed date: ${appointment.appointmentDate ? new Date(appointment.appointmentDate).toLocaleDateString() : "To be scheduled"}</p><p><a href="${confirmUrl}">Confirm appointment</a></p><p>If the date does not work, please reply directly to <a href="mailto:${escapeHtml(homeownerEmail)}">${escapeHtml(homeownerEmail)}</a>.</p><p>— New Home Warranty HQ</p>`;
+    const text = `Hello,\n\n${homeownerName} has requested an appointment to address the following issue at ${issue.home.address}:\n\n${issue.title}\n\nProposed date: ${appointment.appointmentDate ? new Date(appointment.appointmentDate).toLocaleDateString() : "To be scheduled"}\n\nPlease confirm the appointment by clicking this link:\n${confirmUrl}\n\nIf the date does not work, simply reply to this email with alternatives; your reply will reach ${homeownerName ?? "the homeowner"} and be recorded in New Home Warranty HQ.\n\n— New Home Warranty HQ`;
+    const html = `<p>Hello,</p><p>${escapeHtml(homeownerName ?? "The homeowner")} has requested an appointment to address the following issue at <strong>${escapeHtml(issue.home.address)}</strong>:</p><p>${escapeHtml(issue.title)}</p><p>Proposed date: ${appointment.appointmentDate ? new Date(appointment.appointmentDate).toLocaleDateString() : "To be scheduled"}</p><p><a href="${confirmUrl}">Confirm appointment</a></p><p>If the date does not work, simply reply to this email with alternatives; your reply will reach ${escapeHtml(homeownerName ?? "the homeowner")} and be recorded in New Home Warranty HQ.</p><p>— New Home Warranty HQ</p>`;
 
     try {
       await sendEmail({
@@ -81,7 +82,7 @@ export async function createAppointment(
         subject,
         text,
         html,
-        replyTo: homeownerEmail,
+        replyTo: getIssueReplyAddress(issueId),
       });
     } catch (err) {
       console.error("[appointment proposal email] failed", err);

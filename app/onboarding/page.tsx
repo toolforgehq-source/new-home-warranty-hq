@@ -3,6 +3,21 @@ import Link from "next/link";
 import prisma from "@/lib/prisma";
 import OnboardingForm from "./OnboardingForm";
 
+function OnboardingFinalizing() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-6 py-12">
+      <meta httpEquiv="refresh" content="3" />
+      <div className="w-full max-w-lg rounded-2xl bg-white p-8 shadow-sm">
+        <h1 className="text-2xl font-bold text-navy">Finalizing your purchase</h1>
+        <p className="mt-4 text-gray-600">
+          Thanks for your payment. We&apos;re confirming it with Stripe now &mdash; this page will refresh
+          automatically. You&apos;ll also receive a setup link by email.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function OnboardingError({ message }: { message: string }) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-6 py-12">
@@ -80,15 +95,17 @@ export default async function OnboardingPage({
       return <OnboardingError message="We could not find your purchase. Please check your link." />;
     }
 
+    if (purchase.status === "PENDING") {
+      return <OnboardingFinalizing />;
+    }
+
     if (purchase.status !== "SUCCEEDED") {
       return <OnboardingError message="Your payment has not been completed. Please finish checkout first." />;
     }
 
     const token = purchase.onboardingToken?.token;
     if (!token) {
-      return (
-        <OnboardingError message="Your purchase is being finalized. Please wait a moment and refresh." />
-      );
+      return <OnboardingFinalizing />;
     }
 
     const error = await validateToken(token);

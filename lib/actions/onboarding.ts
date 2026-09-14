@@ -126,12 +126,16 @@ export async function completeOnboarding(
 
     const home = await prisma.home.findFirst({ where: { primaryOwnerId: user.id }, orderBy: { createdAt: "desc" } });
     if (home) {
-      await sendWelcomeEmail({ to: token.email, name, address: home.address });
-      if (token.giftPurchaseId && token.giftPurchase?.partner?.email) {
-        await sendGiftRedemptionConfirmation({
-          to: token.giftPurchase.partner.email,
-          recipientEmail: token.email,
-        });
+      try {
+        await sendWelcomeEmail({ to: token.email, name, address: home.address });
+        if (token.giftPurchaseId && token.giftPurchase?.partner?.email) {
+          await sendGiftRedemptionConfirmation({
+            to: token.giftPurchase.partner.email,
+            recipientEmail: token.email,
+          });
+        }
+      } catch (err) {
+        console.error("[onboarding] post-signup email failed", { userId: user.id }, err);
       }
       await trackEvent({ event: "account_activated", userId: user.id, properties: { homeId: home.id } });
       await logAudit({ actorId: user.id, action: "ONBOARDING_COMPLETED", entityType: "Home", entityId: home.id });
