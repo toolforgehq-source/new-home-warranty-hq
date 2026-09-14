@@ -20,16 +20,21 @@ export async function deliverDueReminders() {
       status: "PENDING",
       dueDate: { lte: now },
     },
-    include: { user: true, issue: true, home: true },
+    include: { user: { include: { reminderSetting: true } }, issue: true, home: true },
   });
 
   const results: { reminderId: string; ok: boolean; error?: string }[] = [];
 
   for (const reminder of due) {
+    if (reminder.user.reminderSetting && !reminder.user.reminderSetting.emailEnabled) {
+      await prisma.reminder.update({ where: { id: reminder.id }, data: { status: "DISMISSED" } });
+      continue;
+    }
+
     const subject = reminderSubjects[reminder.type] ?? "New Home Warranty HQ Reminder";
     const issueTitle = reminder.issue?.title ?? "your issue";
     const homeAddress = reminder.home?.address ?? "your home";
-    const dashboardUrl = `${APP_URL}/dashboard`;
+    const dashboardUrl = reminder.issueId ? `${APP_URL}/dashboard/issues/${reminder.issueId}` : `${APP_URL}/dashboard`;
     const text = `Hi ${reminder.user.name || ""},\n\nThis is a reminder about ${issueTitle} at ${homeAddress}.\n\nOpen your dashboard to take action: ${dashboardUrl}\n\n— New Home Warranty HQ`;
 
     try {

@@ -13,6 +13,7 @@ export async function addIssueComment(_prevState: { error?: string } | null, for
 
   const issueId = formData.get("issueId") as string;
   const content = (formData.get("content") as string)?.trim();
+  const isInternal = formData.get("isInternal") === "true";
 
   if (!issueId || !content) return { error: "Comment is required." };
 
@@ -36,6 +37,7 @@ export async function addIssueComment(_prevState: { error?: string } | null, for
       userId: session.user.id,
       direction: "HOMEOWNER",
       content,
+      isInternal,
     },
   });
 

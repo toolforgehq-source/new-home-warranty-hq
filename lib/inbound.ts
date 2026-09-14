@@ -30,6 +30,26 @@ export function parseEmailAddress(raw: string | null | undefined): string {
   return match ? match[1] : cleaned;
 }
 
+function decodeDataUri(input: string | null): string | null {
+  if (!input || !input.startsWith("data:")) return input;
+  const commaIndex = input.indexOf(",");
+  if (commaIndex === -1) return input;
+  const base64 = input.slice(commaIndex + 1);
+  const header = input.slice(0, commaIndex);
+  if (header.includes(";base64")) {
+    try {
+      return Buffer.from(base64, "base64").toString("utf-8");
+    } catch {
+      return input;
+    }
+  }
+  try {
+    return decodeURIComponent(base64);
+  } catch {
+    return base64;
+  }
+}
+
 function stripHtml(html: string): string {
   return html
     .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
@@ -57,8 +77,10 @@ interface InboundAttachment {
 }
 
 function findReplyBody(email: InboundEmail): string {
-  if (email.text) return email.text;
-  if (email.html) return stripHtml(email.html);
+  const text = decodeDataUri(email.text);
+  const html = decodeDataUri(email.html);
+  if (text) return text;
+  if (html) return stripHtml(html);
   return "[No content]";
 }
 
@@ -144,18 +166,17 @@ export async function processInboundEmail(event: InboundWebhookEvent) {
   }
 
   const builderEmail = issue.home.builderEmail?.trim().toLowerCase();
-  const homeownerEmails = [
-    issue.home.primaryOwner?.email?.toLowerCase(),
-    issue.user?.email?.toLowerCase(),
-    ...issue.home.memberships.map((m) => m.user?.email?.toLowerCase()).filter((e): e is string => Boolean(e)),
-  ].filter(Boolean);
+  const rawHomeownerEmails = [
+    issue.home.primaryOwner?.email,
+    issue.user?.email,
+    ...issue.home.memberships.map((m) => m.user?.email).filter((e): e is string => Boolean(e)),
+  ].filter((e): e is string => Boolean(e));
+  const homeownerEmailMap = new Map(rawHomeownerEmails.map((e) => [e.toLowerCase(), e]));
+  const homeownerEmails = Array.from(homeownerEmailMap.values());
 
-  let direction: IssueCommentDirection = "BUILDER";
-  if (homeownerEmails.includes(from) || homeownerEmails.includes(fromAddress)) {
-    direction = "HOMEOWNER";
-  } else if (builderEmail && (from === builderEmail || fromAddress === builderEmail)) {
-    direction = "BUILDER";
-  }
+  const isFromBuilder = builderEmail && (from === builderEmail || fromAddress === builderEmail);
+  const isFromHomeowner = homeownerEmails.some((e) => e.toLowerCase() === from || e.toLowerCase() === fromAddress);
+  const direction: IssueCommentDirection = isFromBuilder && !isFromHomeowner ? "BUILDER" : "HOMEOWNER";
 
   const existing = await prisma.issueComment.findUnique({
     where: { externalId: emailId },
@@ -183,35 +204,45 @@ export async function processInboundEmail(event: InboundWebhookEvent) {
   });
 
   const attachments = await getAttachmentPaths(emailId, inbound.attachments || []);
+  const inboundHtml = decodeDataUri(inbound.html);
 
   if (direction === "BUILDER") {
-    const to = issue.home.primaryOwner?.email;
+    const [to, ...cc] = homeownerEmails;
     if (to) {
-      await sendEmail({
-        to,
-        cc: issue.home.memberships.map((m) => m.user.email).filter((e): e is string => Boolean(e)),
-        subject: `Re: ${inbound.subject}`,
-        text: `${content}\n\n— Forwarded from ${fromName}\nReply to this email to respond directly to your builder. Your message will be logged in New Home Warranty HQ.`,
-        html: inbound.html
-          ? `<div style="font-family: sans-serif; padding: 16px;">${inbound.html}<hr/><p style="color:#666;">Forwarded from ${fromName}<br/>Reply to this email to respond directly to your builder. Your message will be logged in New Home Warranty HQ.</p></div>`
-          : undefined,
-        replyTo: matchedTo,
-        attachments,
-      });
+      try {
+        await sendEmail({
+          to,
+          cc,
+          subject: `Re: ${inbound.subject}`,
+          text: `${content}\n\n— Forwarded from ${fromName}\nReply to this email to respond directly to your builder. Your message will be logged in New Home Warranty HQ.`,
+          html: inboundHtml
+            ? `<div style="font-family: sans-serif; padding: 16px;">${inboundHtml}<hr/><p style="color:#666;">Forwarded from ${fromName}<br/>Reply to this email to respond directly to your builder. Your message will be logged in New Home Warranty HQ.</p></div>`
+            : undefined,
+          replyTo: matchedTo,
+          attachments,
+        });
+      } catch (err) {
+        console.error("[inbound] failed to forward builder reply to homeowner", err);
+      }
     }
   } else if (direction === "HOMEOWNER") {
     const to = issue.home.builderEmail;
     if (to) {
-      await sendEmail({
-        to,
-        subject: `Re: ${inbound.subject}`,
-        text: `${content}\n\n— Forwarded from ${issue.home.primaryOwner?.name || "Homeowner"}\nReply to this email to respond directly to the homeowner. Your message will be logged in New Home Warranty HQ.`,
-        html: inbound.html
-          ? `<div style="font-family: sans-serif; padding: 16px;">${inbound.html}<hr/><p style="color:#666;">Forwarded from ${issue.home.primaryOwner?.name || "Homeowner"}<br/>Reply to this email to respond directly to the homeowner. Your message will be logged in New Home Warranty HQ.</p></div>`
-          : undefined,
-        replyTo: matchedTo,
-        attachments,
-      });
+      try {
+        await sendEmail({
+          to,
+          cc: homeownerEmails,
+          subject: `Re: ${inbound.subject}`,
+          text: `${content}\n\n— Forwarded from ${issue.home.primaryOwner?.name || "Homeowner"}\nReply to this email to respond directly to the homeowner. Your message will be logged in New Home Warranty HQ.`,
+          html: inboundHtml
+            ? `<div style="font-family: sans-serif; padding: 16px;">${inboundHtml}<hr/><p style="color:#666;">Forwarded from ${issue.home.primaryOwner?.name || "Homeowner"}<br/>Reply to this email to respond directly to the homeowner. Your message will be logged in New Home Warranty HQ.</p></div>`
+            : undefined,
+          replyTo: matchedTo,
+          attachments,
+        });
+      } catch (err) {
+        console.error("[inbound] failed to forward homeowner reply to builder", err);
+      }
     }
   }
 

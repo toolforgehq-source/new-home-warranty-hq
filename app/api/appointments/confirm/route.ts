@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { sendEmail } from "@/lib/email";
 import { createSystemComment } from "@/lib/actions/comment";
+import { APP_URL } from "@/lib/stripe";
 
 export async function GET(request: NextRequest) {
   const token = request.nextUrl.searchParams.get("token");
@@ -11,7 +12,14 @@ export async function GET(request: NextRequest) {
 
   const appointment = await prisma.appointment.findUnique({
     where: { confirmationToken: token },
-    include: { issue: { include: { home: true, user: true } } },
+    include: {
+      issue: {
+        include: {
+          home: { include: { primaryOwner: true, memberships: { include: { user: true } } } },
+          user: true,
+        },
+      },
+    },
   });
 
   if (!appointment) {
@@ -57,18 +65,28 @@ export async function GET(request: NextRequest) {
     }
   });
 
-  const homeownerEmail = appointment.issue.user?.email;
+  const homeownerEmails = Array.from(
+    new Set(
+      [
+        appointment.issue.home.primaryOwner?.email,
+        appointment.issue.user?.email,
+        ...appointment.issue.home.memberships.map((m) => m.user.email),
+      ].filter((e): e is string => Boolean(e))
+    )
+  );
   const appointmentDate = appointment.appointmentDate
     ? new Date(appointment.appointmentDate).toLocaleDateString()
     : "To be scheduled";
+  const dashboardUrl = `${APP_URL}/dashboard/issues/${appointment.issueId}`;
 
-  if (homeownerEmail) {
+  if (homeownerEmails.length > 0) {
+    const [to, ...cc] = homeownerEmails;
     const subject = `Appointment confirmed: ${appointment.issue.title}`;
-    const text = `Good news — the builder confirmed the appointment for ${appointment.issue.title} at ${appointment.issue.home.address}.\n\nDate: ${appointmentDate}\n\nYou can view the issue in your dashboard: https://newhomewarrantyhq.com/dashboard/issues/${appointment.issueId}\n\n— New Home Warranty HQ`;
-    const html = `<p>Good news — the builder confirmed the appointment for <strong>${escapeHtml(appointment.issue.title)}</strong> at ${escapeHtml(appointment.issue.home.address)}.</p><p>Date: ${appointmentDate}</p><p><a href="https://newhomewarrantyhq.com/dashboard/issues/${appointment.issueId}">View issue in dashboard</a></p><p>— New Home Warranty HQ</p>`;
+    const text = `Good news — the builder confirmed the appointment for ${appointment.issue.title} at ${appointment.issue.home.address}.\n\nDate: ${appointmentDate}\n\nYou can view the issue in your dashboard: ${dashboardUrl}\n\n— New Home Warranty HQ`;
+    const html = `<p>Good news — the builder confirmed the appointment for <strong>${escapeHtml(appointment.issue.title)}</strong> at ${escapeHtml(appointment.issue.home.address)}.</p><p>Date: ${appointmentDate}</p><p><a href="${dashboardUrl}">View issue in dashboard</a></p><p>— New Home Warranty HQ</p>`;
 
     try {
-      await sendEmail({ to: homeownerEmail, subject, text, html });
+      await sendEmail({ to, cc, subject, text, html });
     } catch (err) {
       console.error("[appointment confirm] homeowner notification failed", err);
     }

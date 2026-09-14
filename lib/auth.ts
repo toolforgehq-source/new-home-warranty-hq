@@ -2,6 +2,7 @@ import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { nextCookies } from "better-auth/next-js";
 import prisma from "@/lib/prisma";
+import { sendEmail } from "@/lib/email";
 
 export const auth = betterAuth({
   database: prismaAdapter(prisma, {
@@ -21,15 +22,33 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: process.env.REQUIRE_EMAIL_VERIFICATION === "true",
-    async sendResetPassword({ user, url, token }) {
-      // TODO: send password reset email via Resend
-      console.log("[sendResetPassword]", user.email, url, token);
+    async sendResetPassword({ user, url }) {
+      try {
+        await sendEmail({
+          to: user.email,
+          subject: "Reset your New Home Warranty HQ password",
+          text: `Hi ${user.name || user.email},\n\nClick the link below to reset your password:\n${url}\n\n— New Home Warranty HQ`,
+          html: `<p>Hi ${escapeHtml(user.name || user.email)},</p><p>Click the link below to reset your password:</p><p><a href="${url}">${url}</a></p><p>— New Home Warranty HQ</p>`,
+        });
+      } catch (err) {
+        console.error("[sendResetPassword] failed", err);
+        throw err;
+      }
     },
   },
   emailVerification: {
-    async sendVerificationEmail({ user, url, token }) {
-      // TODO: send verification email via Resend
-      console.log("[sendVerificationEmail]", user.email, url, token);
+    async sendVerificationEmail({ user, url }) {
+      try {
+        await sendEmail({
+          to: user.email,
+          subject: "Verify your New Home Warranty HQ account",
+          text: `Hi ${user.name || user.email},\n\nClick the link below to verify your email:\n${url}\n\n— New Home Warranty HQ`,
+          html: `<p>Hi ${escapeHtml(user.name || user.email)},</p><p>Click the link below to verify your email:</p><p><a href="${url}">${url}</a></p><p>— New Home Warranty HQ</p>`,
+        });
+      } catch (err) {
+        console.error("[sendVerificationEmail] failed", err);
+        throw err;
+      }
     },
   },
   user: {
@@ -47,3 +66,12 @@ export const auth = betterAuth({
 });
 
 export type Auth = typeof auth;
+
+function escapeHtml(input: string): string {
+  return input
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
