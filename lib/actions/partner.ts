@@ -10,6 +10,7 @@ import { trackEvent } from "@/lib/analytics";
 import { logAudit } from "@/lib/audit";
 import { sendPartnerApprovedEmail, sendPartnerGiftReceipt } from "@/lib/emails/partner";
 import { sendGiftInvitation } from "@/lib/emails/gift";
+import { sendEmail } from "@/lib/email";
 import { APP_URL } from "@/lib/stripe";
 
 function slugify(input: string) {
@@ -70,6 +71,16 @@ export async function registerPartner(
 
     await trackEvent({ event: "partner_registered", userId: user.id, properties: { partnerType, slug } });
     await logAudit({ actorId: user.id, action: "PARTNER_REGISTERED", entityType: "PartnerProfile", entityId: profile.id });
+
+    try {
+      await sendEmail({
+        to: process.env.SUPPORT_EMAIL ?? "hello@newhomewarrantyhq.com",
+        subject: `New partner awaiting approval: ${company}`,
+        text: `${name} (${email}) registered as a ${partnerType} partner for ${company}.\n\nReview and approve: ${APP_URL}/admin`,
+      });
+    } catch (err) {
+      console.error("[partner register] admin notification failed", err);
+    }
   } catch (err) {
     console.error("[partner register]", err);
     return { error: "Could not create partner account. The email may already be in use." };
@@ -98,11 +109,15 @@ export async function approvePartner(
 
   const publicPageUrl = `${APP_URL}/partners/${profile.slug}`;
 
-  await sendPartnerApprovedEmail({
-    to: profile.user.email,
-    name: profile.user.name || profile.user.email,
-    publicPageUrl,
-  });
+  try {
+    await sendPartnerApprovedEmail({
+      to: profile.user.email,
+      name: profile.user.name || profile.user.email,
+      publicPageUrl,
+    });
+  } catch (err) {
+    console.error("[partner approve] email failed", { partnerProfileId: profile.id }, err);
+  }
 
   await trackEvent({ event: "partner_approved", userId: session.user.id, properties: { partnerId: profile.id } });
   await logAudit({ actorId: session.user.id, action: "PARTNER_APPROVED", entityType: "PartnerProfile", entityId: profile.id });
@@ -181,12 +196,17 @@ export async function resendGiftInvitation(
 
   const redemptionUrl = `${APP_URL}/onboarding?token=${gift.onboardingToken.token}`;
 
-  await sendGiftInvitation({
-    to: gift.recipientEmail,
-    buyerName: session.user.name || session.user.email,
-    buyerCompany: profile?.company,
-    redemptionUrl,
-  });
+  try {
+    await sendGiftInvitation({
+      to: gift.recipientEmail,
+      buyerName: session.user.name || session.user.email,
+      buyerCompany: profile?.company,
+      redemptionUrl,
+    });
+  } catch (err) {
+    console.error("[resend gift invitation] failed", err);
+    return { error: "Could not send the invitation email. Please try again." };
+  }
 
   await logAudit({ actorId: session.user.id, action: "GIFT_INVITATION_RESENT", entityType: "GiftPurchase", entityId: gift.id });
 
@@ -213,14 +233,19 @@ export async function sendGiftReceipt(
   if (!gift || !gift.purchase) return { error: "Gift not found" };
   if (gift.purchase.status !== "SUCCEEDED") return { error: "Receipt not available until payment is complete" };
 
-  await sendPartnerGiftReceipt({
-    to: session.user.email,
-    partnerName: session.user.name || session.user.email,
-    recipientName: gift.recipientName,
-    recipientEmail: gift.recipientEmail,
-    amount: gift.purchase.amount,
-    purchasedAt: gift.purchase.createdAt,
-  });
+  try {
+    await sendPartnerGiftReceipt({
+      to: session.user.email,
+      partnerName: session.user.name || session.user.email,
+      recipientName: gift.recipientName,
+      recipientEmail: gift.recipientEmail,
+      amount: gift.purchase.amount,
+      purchasedAt: gift.purchase.createdAt,
+    });
+  } catch (err) {
+    console.error("[gift receipt] failed", err);
+    return { error: "Could not send the receipt email. Please try again." };
+  }
 
   await logAudit({ actorId: session.user.id, action: "GIFT_RECEIPT_SENT", entityType: "GiftPurchase", entityId: gift.id });
 
