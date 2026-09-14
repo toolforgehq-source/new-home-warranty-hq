@@ -9,14 +9,26 @@ type Candidate = {
   dueDate: Date;
 };
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+const repeatIntervalDays: Partial<Record<ReminderType, number>> = {
+  SUBMISSION_PENDING: 7,
+  BUILDER_RESPONSE_PENDING: 7,
+  UNRESOLVED_ISSUES: 14,
+  DOCUMENT_MISSING: 14,
+  WARRANTY_REVIEW_UPCOMING: 30,
+  FINAL_REVIEW: 30,
+};
+
 async function hasPendingReminder(userId: string, type: ReminderType, issueId: string | undefined) {
+  const windowDays = repeatIntervalDays[type] ?? 1;
   return prisma.reminder.findFirst({
     where: {
       userId,
       type,
       issueId: issueId ?? null,
       status: { in: ["PENDING", "SENT"] },
-      dueDate: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+      dueDate: { gte: new Date(Date.now() - windowDays * DAY_MS) },
     },
   });
 }
