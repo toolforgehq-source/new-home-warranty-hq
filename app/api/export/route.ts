@@ -28,6 +28,8 @@ export async function POST(request: NextRequest) {
           appointments: true,
           repairVerifications: true,
           statusHistory: true,
+          comments: { orderBy: { createdAt: "asc" } },
+          warrantyRequests: true,
         },
       },
       documents: true,
@@ -57,7 +59,20 @@ export async function POST(request: NextRequest) {
   try {
     const zip = new JSZip();
 
-    zip.file(`${home.address.replace(/\W+/g, "_")}/home.json`, JSON.stringify(home, null, 2));
+    const folder = home.address.replace(/\W+/g, "_");
+    zip.file(`${folder}/home.json`, JSON.stringify(home, null, 2));
+
+    for (const issue of home.issues) {
+      if (issue.comments.length === 0) continue;
+      const log = issue.comments
+        .map((c) => {
+          const who = c.direction === "BUILDER" ? c.emailFrom || "Builder" : c.direction === "SYSTEM" ? "System" : "Homeowner";
+          const flag = c.isInternal ? " (internal note)" : "";
+          return `[${c.createdAt.toISOString()}] ${who}${flag}:\n${c.content}\n`;
+        })
+        .join("\n");
+      zip.file(`${folder}/communications/${issue.title.replace(/\W+/g, "_")}_${issue.id}.txt`, log);
+    }
 
     const allDocuments = [...home.documents, ...home.issues.flatMap((i) => i.documents)];
     for (const doc of allDocuments) {
