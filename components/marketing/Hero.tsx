@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CheckCircle2, ShieldCheck, Clock, Gift } from "lucide-react";
+import { CheckCircle2, ShieldCheck, BadgeDollarSign, Lock, Gift } from "lucide-react";
 
 export function Hero() {
   return (
@@ -8,46 +8,58 @@ export function Hero() {
         <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
           <div className="max-w-2xl">
             <p className="text-sm font-semibold uppercase tracking-wide text-green">
-              For Homeowners
+              For New-Construction Homeowners
             </p>
             <h1 className="mt-4 text-4xl font-bold leading-tight lg:text-5xl xl:text-6xl">
-              Your new-home warranty has deadlines.
+              Your builder warranty has deadlines.
             </h1>
             <p className="mt-4 text-2xl font-medium text-white/90">
-              Make sure nothing gets forgotten.
+              Stay ahead of every one.
             </p>
             <p className="mt-6 text-lg leading-8 text-white/70">
-              Capture issues with photos and dates, create professional warranty
-              requests, track every repair, and keep a complete record you
-              control.
+              Keep every warranty issue, photo, builder message, appointment, and
+              repair in one organized place&mdash;so nothing gets forgotten
+              before an important warranty deadline passes.
             </p>
 
-            <div className="mt-8 flex flex-col gap-4 sm:flex-row">
+            <div className="mt-8">
               <Link
                 href="/checkout?product=homeowner"
-                className="rounded-full bg-green px-8 py-4 text-center text-lg font-semibold text-white hover:bg-green-600"
+                className="inline-block w-full rounded-full bg-green px-8 py-4 text-center text-lg font-semibold text-white hover:bg-green-600 sm:w-auto"
               >
-                Protect My Home — $189
-              </Link>
-              <Link
-                href="/checkout?product=gift"
-                className="rounded-full border border-white/30 bg-white/5 px-8 py-4 text-center text-lg font-semibold text-white backdrop-blur hover:bg-white/10"
-              >
-                Give a Gift — $124
+                Start My Warranty HQ — $189
               </Link>
             </div>
 
-            <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-white/70">
+            <ul className="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-sm text-white/80">
               <li className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-green" /> One-time payment
+                <ShieldCheck className="h-4 w-4 text-green" /> 30-day money-back guarantee
               </li>
               <li className="flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4 text-green" /> Your data
+                <BadgeDollarSign className="h-4 w-4 text-green" /> One-time payment
               </li>
               <li className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-green" /> Your records
+                <CheckCircle2 className="h-4 w-4 text-green" /> No subscription
+              </li>
+              <li className="flex items-center gap-2">
+                <Lock className="h-4 w-4 text-green" /> Private by default
               </li>
             </ul>
+
+            <p className="mt-6 text-sm text-white/60">
+              Buying for a client?{" "}
+              <Link href="/partners" className="font-medium text-white underline-offset-4 hover:underline">
+                Gift New Home Warranty HQ &rarr;
+              </Link>
+            </p>
+
+            <div className="mt-8 rounded-xl border border-white/15 bg-white/5 px-5 py-4">
+              <p className="font-semibold text-white">Not another home warranty.</p>
+              <p className="mt-1 text-sm text-white/70">
+                New Home Warranty HQ helps you manage the builder warranty you
+                already have.
+              </p>
+            </div>
           </div>
 
           <div className="relative hidden lg:block">

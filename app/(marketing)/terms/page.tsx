@@ -101,8 +101,8 @@ export default function TermsPage() {
       <LegalSection title="9. Contact">
         <p>
           For questions about these Terms, contact us at{" "}
-          <a href="mailto:support@newhomewarrantyhq.com" className="text-green hover:underline">
-            support@newhomewarrantyhq.com
+          <a href="mailto:hello@newhomewarrantyhq.com" className="text-green hover:underline">
+            hello@newhomewarrantyhq.com
           </a>.
         </p>
       </LegalSection>

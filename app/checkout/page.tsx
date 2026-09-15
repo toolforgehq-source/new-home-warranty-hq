@@ -70,7 +70,7 @@ function CheckoutContent() {
 
       {product === "homeowner" && (
         <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-sm">
-          <h1 className="text-2xl font-bold text-navy">Protect My Home</h1>
+          <h1 className="text-2xl font-bold text-navy">Start My Warranty HQ</h1>
           <p className="mt-2 text-gray-600">$189 one-time payment. No subscription.</p>
           <ul className="mt-6 space-y-2 text-sm text-gray-600">
             <li>Document issues with photos and dates</li>

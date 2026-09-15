@@ -32,7 +32,7 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/#for-partners" className="hover:text-white">
+                <Link href="/partners" className="hover:text-white">
                   For Partners
                 </Link>
               </li>

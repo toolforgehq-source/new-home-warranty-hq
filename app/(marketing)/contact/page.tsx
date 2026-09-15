@@ -6,7 +6,7 @@ export const metadata = {
 };
 
 export default function ContactPage() {
-  const supportEmail = process.env.SUPPORT_EMAIL || "support@newhomewarrantyhq.com";
+  const supportEmail = process.env.SUPPORT_EMAIL || "hello@newhomewarrantyhq.com";
   return (
     <LegalPage title="Contact Us">
       <p>

@@ -7,7 +7,7 @@ export function MobileStickyCTA() {
         href="/checkout?product=homeowner"
         className="flex w-full items-center justify-center rounded-full bg-green py-3.5 text-base font-semibold text-white hover:bg-green-600"
       >
-        Protect My Home — $189
+        Start My Warranty HQ — $189
       </Link>
     </div>
   );

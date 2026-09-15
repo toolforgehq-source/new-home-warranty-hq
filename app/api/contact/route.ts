@@ -17,7 +17,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "All fields are required." }, { status: 400 });
     }
 
-    const supportEmail = process.env.SUPPORT_EMAIL ?? "support@newhomewarrantyhq.com";
+    const supportEmail = process.env.SUPPORT_EMAIL ?? "hello@newhomewarrantyhq.com";
 
     await sendEmail({
       to: supportEmail,

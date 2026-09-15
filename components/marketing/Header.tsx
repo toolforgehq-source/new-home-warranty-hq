@@ -10,7 +10,7 @@ const nav = [
   { label: "Features", href: "/#features" },
   { label: "Why It Matters", href: "/#why-it-matters" },
   { label: "Pricing", href: "/#pricing" },
-  { label: "For Partners", href: "/#for-partners" },
+  { label: "For Partners", href: "/partners" },
   { label: "FAQ", href: "/#faq" },
 ];
 
@@ -41,13 +41,13 @@ export function Header() {
             href="/login"
             className="text-sm font-medium text-white/90 hover:text-white"
           >
-            Log In
+            Sign In
           </Link>
           <Link
             href="/checkout?product=homeowner"
             className="rounded-full bg-green px-5 py-2.5 text-sm font-semibold text-white hover:bg-green-600"
           >
-            Protect My Home
+            Start My Warranty HQ
           </Link>
         </div>
 
@@ -78,14 +78,14 @@ export function Header() {
               onClick={() => setOpen(false)}
               className="text-base font-medium text-white/90 hover:text-white"
             >
-              Log In
+              Sign In
             </Link>
             <Link
               href="/checkout?product=homeowner"
               onClick={() => setOpen(false)}
               className="mt-2 rounded-full bg-green px-5 py-3 text-center text-base font-semibold text-white hover:bg-green-600"
             >
-              Protect My Home
+              Start My Warranty HQ
             </Link>
           </nav>
         </div>
