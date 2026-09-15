@@ -42,8 +42,8 @@ export default function RefundPage() {
       <LegalSection title="How to Request a Refund">
         <p>
           Contact us at{" "}
-          <a href="mailto:support@newhomewarrantyhq.com" className="text-green hover:underline">
-            support@newhomewarrantyhq.com
+          <a href="mailto:hello@newhomewarrantyhq.com" className="text-green hover:underline">
+            hello@newhomewarrantyhq.com
           </a>{" "}
           with your payment confirmation email or the email address used at
           checkout. We will process eligible refund requests within 2 business

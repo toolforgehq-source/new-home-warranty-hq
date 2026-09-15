@@ -9,39 +9,41 @@ export default function AboutPage() {
   return (
     <LegalPage title="About New Home Warranty HQ">
       <p>
-        New Home Warranty HQ was built to solve a simple, expensive problem:
-        new homes come with builder warranties, but the deadlines, documents,
-        and follow-up work are easy to lose track of. Our software gives
-        homeowners a structured system to document issues, create professional
-        warranty requests, track repair progress, and keep a complete record.
+        New Home Warranty HQ was created by someone who spent years on the
+        builder side of new construction&mdash;walking homes with buyers,
+        collecting warranty lists, scheduling trades, and watching how quickly
+        the follow-up became a mess of texts, emails, photos, and sticky notes.
+      </p>
+      <p>
+        The pattern was always the same. Homeowners noticed things. Some got
+        reported, some got forgotten. Builders meant well, but items slipped
+        between trades and calendars. And when a deadline mattered, nobody
+        could quickly answer the simple questions: <em>What was reported? When?
+        What did the builder say? Was it actually fixed?</em>
+      </p>
+      <p>
+        New Home Warranty HQ is the system we wished every homeowner had: one
+        calm, private place to capture an issue with photos, send a
+        professional request, keep the builder&apos;s replies in the same thread,
+        track the repair, and walk away with a complete record.
       </p>
 
-      <LegalSection title="What We Are">
-        <p>
-          We are a software company. We provide tools that help homeowners stay
-          organized during the builder-warranty period. We do not replace your
-          builder, warranty provider, or insurance. We do not make coverage
-          decisions, perform repairs, or act as legal counsel.
-        </p>
-      </LegalSection>
-
-      <LegalSection title="What We Are Not">
-        <p>New Home Warranty HQ:</p>
+      <LegalSection title="What We Believe">
         <LegalList>
-          <li>Is not a home warranty company.</li>
-          <li>Does not provide insurance or pay for repairs.</li>
-          <li>Does not provide legal advice.</li>
-          <li>Does not communicate with builders on your behalf unless you choose to use your own email or copy our generated information.</li>
+          <li>You shouldn&apos;t have to be an expert to protect your new home.</li>
+          <li>The record belongs to you. Export it anytime; we never sell it.</li>
+          <li>Good documentation makes conversations with your builder easier, not more adversarial.</li>
+          <li>A closing gift should still be useful a year later.</li>
         </LegalList>
       </LegalSection>
 
-      <LegalSection title="Our Commitment">
+      <LegalSection title="What We Are (and Are Not)">
         <p>
-          We believe homeowners deserve a clear, private, and mobile-friendly
-          record of their warranty items. We also believe realtors, lenders, and
-          title professionals should be able to give new-construction buyers a
-          practical closing gift without needing access to private homeowner
-          details.
+          We are a software company that helps you manage the builder warranty
+          you already have. We are not a home warranty company or insurer, we
+          do not pay for or perform repairs, and we do not provide legal advice.
+          Every message to your builder is sent by you, from your account, with
+          your approval.
         </p>
       </LegalSection>
     </LegalPage>

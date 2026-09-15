@@ -117,8 +117,8 @@ export default function PrivacyPage() {
       <LegalSection title="10. Contact">
         <p>
           For privacy questions, contact us at{" "}
-          <a href="mailto:support@newhomewarrantyhq.com" className="text-green hover:underline">
-            support@newhomewarrantyhq.com
+          <a href="mailto:hello@newhomewarrantyhq.com" className="text-green hover:underline">
+            hello@newhomewarrantyhq.com
           </a>.
         </p>
       </LegalSection>

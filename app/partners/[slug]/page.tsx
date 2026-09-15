@@ -124,7 +124,7 @@ export default async function PartnerPublicPage({
               href="/checkout?product=homeowner"
               className="mt-6 inline-block rounded-full bg-green px-8 py-4 text-lg font-semibold text-white hover:bg-green-600"
             >
-              Protect My Home — $189
+              Start My Warranty HQ — $189
             </Link>
           </div>
         </div>
