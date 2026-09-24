@@ -23,6 +23,7 @@ export function GiftHistoryTable({
     recipientEmail: string;
     propertyAddress: string | null;
     status: string;
+    paymentStatus: string;
     createdAt: string;
     onboardingToken?: { token: string } | null;
   }>;
@@ -71,9 +72,11 @@ export function GiftHistoryTable({
             </thead>
             <tbody className="divide-y divide-gray-100">
               {gifts.map((gift) => {
-                const redemptionUrl = gift.onboardingToken
-                  ? `${appUrl}/onboarding?token=${gift.onboardingToken.token}`
-                  : null;
+                const unpaid = gift.paymentStatus !== "SUCCEEDED";
+                const redemptionUrl =
+                  gift.onboardingToken && !unpaid
+                    ? `${appUrl}/onboarding?token=${gift.onboardingToken.token}`
+                    : null;
 
                 return (
                   <tr key={gift.id} className="align-top">
@@ -85,13 +88,22 @@ export function GiftHistoryTable({
                       {gift.propertyAddress || "—"}
                     </td>
                     <td className="py-4 pr-3">
-                      <span
-                        className={`rounded-full px-2.5 py-1 text-xs font-medium ${
-                          statusStyles[gift.status] ?? "bg-gray-100 text-gray-700"
-                        }`}
-                      >
-                        {gift.status.toLowerCase()}
-                      </span>
+                      {unpaid ? (
+                        <span
+                          className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600"
+                          title="Checkout was started but payment was not completed. You have not been charged."
+                        >
+                          unpaid &middot; checkout not completed
+                        </span>
+                      ) : (
+                        <span
+                          className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                            statusStyles[gift.status] ?? "bg-gray-100 text-gray-700"
+                          }`}
+                        >
+                          {gift.status.toLowerCase()}
+                        </span>
+                      )}
                     </td>
                     <td className="py-4 pr-3 text-gray-500">
                       {new Date(gift.createdAt).toLocaleDateString()}

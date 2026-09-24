@@ -64,7 +64,7 @@ export async function registerPartner(
           partnerType: partnerType as PartnerType,
           company,
           slug,
-          isApproved: false,
+          isApproved: true,
         },
       });
     });
@@ -75,8 +75,8 @@ export async function registerPartner(
     try {
       await sendEmail({
         to: process.env.SUPPORT_EMAIL ?? "hello@newhomewarrantyhq.com",
-        subject: `New partner awaiting approval: ${company}`,
-        text: `${name} (${email}) registered as a ${partnerType} partner for ${company}.\n\nReview and approve: ${APP_URL}/admin`,
+        subject: `New partner registered: ${company || name}`,
+        text: `${name} (${email}) registered as a ${partnerType} partner for ${company || "(no company)"}.\n\nPublic page: ${APP_URL}/partners/${slug}\nAdmin: ${APP_URL}/admin`,
       });
     } catch (err) {
       console.error("[partner register] admin notification failed", err);

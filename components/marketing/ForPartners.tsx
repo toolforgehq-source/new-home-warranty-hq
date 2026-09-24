@@ -67,8 +67,11 @@ export function ForPartners() {
                 href="/partner/register"
                 className="mt-3 block w-full rounded-full bg-white py-3.5 text-center font-semibold text-navy ring-1 ring-gray-200 hover:bg-gray-50"
               >
-                Become a partner
+                Become a partner &mdash; free
               </Link>
+              <p className="mt-3 text-center text-xs text-gray-500">
+                Free to join. No subscription. No minimums. Pay only when you gift NHWHQ to a client.
+              </p>
             </div>
           </div>
         </div>

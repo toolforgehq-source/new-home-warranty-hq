@@ -25,6 +25,13 @@ export default function PartnerRegisterPage() {
         <p className="mt-2 text-sm text-gray-600">
           Register to give New Home Warranty HQ as a $124 closing gift.
         </p>
+        <div className="mt-4 rounded-xl bg-green-50 p-4 text-sm text-green-900">
+          <p className="font-semibold">Free to join. No subscription. No minimums.</p>
+          <p className="mt-1">
+            Creating an account costs nothing and commits you to nothing. You pay
+            only when you choose to gift NHWHQ to a client, $124 per gift.
+          </p>
+        </div>
 
         <form action={action} className="mt-6 space-y-4">
           <input
@@ -96,8 +103,11 @@ export default function PartnerRegisterPage() {
             disabled={pending}
             className="w-full rounded-full bg-navy py-3 font-semibold text-white hover:bg-navy-700 disabled:opacity-70"
           >
-            {pending ? "Creating..." : "Create partner account"}
+            {pending ? "Creating..." : "Create free partner account"}
           </button>
+          <p className="text-center text-xs text-gray-500">
+            No credit card required. Your account is active immediately.
+          </p>
         </form>
       </div>
     </div>
