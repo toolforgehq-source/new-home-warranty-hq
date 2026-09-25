@@ -12,7 +12,6 @@ export function PartnerChecklist({
 }) {
   const steps = [
     { label: "Complete your profile", done: profileComplete, icon: User, href: "/partner/dashboard/edit" },
-    { label: "Get approved by our team", done: approved, icon: Check, href: undefined },
     { label: "Send your first gift", done: hasGifts, icon: Gift, href: "/checkout?product=gift" },
     { label: "Share your co-branded page", done: approved && hasGifts, icon: Share2, href: "/partner/dashboard/edit" },
   ];

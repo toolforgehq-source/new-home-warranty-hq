@@ -68,7 +68,7 @@ export function PartnerProfileCard({
         </Link>
         {!profile.isApproved && (
           <span className="rounded-full bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700">
-            Pending admin approval
+            Public page unavailable
           </span>
         )}
       </div>

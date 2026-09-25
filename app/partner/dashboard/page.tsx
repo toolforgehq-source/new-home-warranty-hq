@@ -10,7 +10,12 @@ import { GiftHistoryTable } from "@/components/partner/GiftHistoryTable";
 import { PartnerProfileCard } from "@/components/partner/PartnerProfileCard";
 import { PartnerChecklist } from "@/components/partner/PartnerChecklist";
 
-export default async function PartnerDashboardPage() {
+export default async function PartnerDashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ gift?: string }>;
+}) {
+  const { gift: giftParam } = await searchParams;
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session || session.user.role !== "PARTNER") {
     redirect("/partner/register");
@@ -31,10 +36,11 @@ export default async function PartnerDashboardPage() {
     redirect("/partner/register");
   }
 
-  const total = gifts.length;
-  const redeemed = gifts.filter((g) => g.status === "REDEEMED").length;
-  const pending = gifts.filter((g) => g.status === "PAID" || g.status === "PENDING").length;
-  const totalAmount = gifts.reduce((sum, g) => sum + (g.purchase?.amount ?? 0), 0);
+  const paidGifts = gifts.filter((g) => g.purchase?.status === "SUCCEEDED");
+  const total = paidGifts.length;
+  const redeemed = paidGifts.filter((g) => g.status === "REDEEMED").length;
+  const pending = paidGifts.filter((g) => g.status === "PAID").length;
+  const totalAmount = paidGifts.reduce((sum, g) => sum + (g.purchase?.amount ?? 0), 0);
   const publicPageUrl = `${APP_URL}/partners/${profile.slug}`;
   const profileComplete = Boolean(profile.company && profile.phone);
 
@@ -44,6 +50,7 @@ export default async function PartnerDashboardPage() {
     recipientEmail: g.recipientEmail,
     propertyAddress: g.propertyAddress,
     status: g.status,
+    paymentStatus: g.purchase?.status ?? "PENDING",
     createdAt: g.createdAt.toISOString(),
     onboardingToken: g.onboardingToken ? { token: g.onboardingToken.token } : null,
   }));
@@ -82,12 +89,27 @@ export default async function PartnerDashboardPage() {
           </Link>
         </div>
 
+        {giftParam === "success" && (
+          <div className="mt-6 rounded-2xl bg-green-50 p-4 text-sm text-green-900">
+            <p className="font-semibold">Payment received. Thank you!</p>
+            <p className="mt-1">
+              We&rsquo;re emailing your client their gift invitation now. It will show
+              as <span className="font-medium">paid</span> below within a minute&mdash;refresh
+              if you don&rsquo;t see it yet.
+            </p>
+          </div>
+        )}
+
+        <p className="mt-6 text-sm text-gray-600">
+          <span className="font-semibold text-navy">Free to join. No subscription. No minimums.</span>{" "}
+          You only pay when you gift New Home Warranty HQ to a client for $124.
+        </p>
+
         {!profile.isApproved && (
           <div className="mt-6 rounded-2xl bg-amber-50 p-4 text-sm text-amber-900">
-            <p className="font-semibold">Your profile is pending admin approval.</p>
+            <p className="font-semibold">Your public co-branded page is currently unavailable.</p>
             <p className="mt-1">
-              Your public co-branded page and gift sharing links will be available once
-              approved. You can still send gifts now.
+              You can still send gifts. Contact hello@newhomewarrantyhq.com if you have questions.
             </p>
           </div>
         )}

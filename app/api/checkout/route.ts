@@ -104,8 +104,8 @@ export async function POST(request: NextRequest) {
     const stripeSession = await stripe.checkout.sessions.create({
       line_items: [{ price: STRIPE_PRICE_GIFT, quantity: 1 }],
       mode: "payment",
-      success_url: `${origin}/partner/gifts/success`,
-      cancel_url: `${origin}/#pricing`,
+      success_url: `${origin}/partner/dashboard?gift=success`,
+      cancel_url: `${origin}/partner/dashboard`,
       client_reference_id: result.giftPurchase.id,
       metadata: {
         productType: "GIFT",
