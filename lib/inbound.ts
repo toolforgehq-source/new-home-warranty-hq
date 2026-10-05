@@ -13,8 +13,27 @@ export function getIssueReplyAddress(issueId: string, domain = inboundDomain) {
   return `issue-${issueId}@${domain}`;
 }
 
+function emailDomain(address: string): string {
+  return parseEmailAddress(address).split("@")[1] ?? "";
+}
+
+function sanitizeDisplayName(name: string): string {
+  return name.replace(/["<>\r\n\\]/g, "").replace(/\s+/g, " ").trim();
+}
+
+/**
+ * Sends issue emails from the issue's inbound address so a plain "Reply" lands in the dashboard
+ * even when a mail client ignores Reply-To. Falls back to the default sender when the inbound
+ * domain differs from the verified sending domain.
+ */
+export function getIssueFromAddress(issueId: string, displayName?: string | null) {
+  if (emailDomain(fromEmail) !== inboundDomain.toLowerCase()) return undefined;
+  const name = sanitizeDisplayName(displayName ? `${displayName} via New Home Warranty HQ` : "New Home Warranty HQ");
+  return `"${name}" <${getIssueReplyAddress(issueId)}>`;
+}
+
 export function parseIssueIdFromEmail(to: string, domain = inboundDomain): string | null {
-  const address = to.toLowerCase().trim();
+  const address = parseEmailAddress(to);
   const parts = address.split("@");
   if (parts.length !== 2) return null;
   const [localPart, host] = parts;
@@ -62,6 +81,7 @@ function stripHtml(html: string): string {
 interface InboundEmail {
   id: string;
   to: string[];
+  cc?: string[] | null;
   from: string;
   subject: string;
   text: string | null;
@@ -127,7 +147,9 @@ export async function processInboundEmail(event: InboundWebhookEvent) {
 
   const inbound = email as InboundEmail;
   const toAddresses = Array.isArray(inbound.to) ? inbound.to : [inbound.to];
-  const matchedTo = toAddresses.find((t) => parseIssueIdFromEmail(t));
+  const ccAddresses = Array.isArray(inbound.cc) ? inbound.cc : inbound.cc ? [inbound.cc] : [];
+  const recipientAddresses = [...toAddresses, ...ccAddresses].filter(Boolean);
+  const matchedTo = recipientAddresses.find((t) => parseIssueIdFromEmail(t));
   if (!matchedTo) {
     return { skipped: true, reason: "No issue address found in to" };
   }
@@ -161,11 +183,11 @@ export async function processInboundEmail(event: InboundWebhookEvent) {
     (fromAddress === appEmailAddress ||
       from === appEmailAddress ||
       from.endsWith(`<${appEmailAddress}>`));
-  if (fromOurDomain) {
+  const fromIssueAddress = !!parseIssueIdFromEmail(fromAddress);
+  if (fromOurDomain || fromIssueAddress) {
     return { skipped: true, reason: "Ignored email from ourselves" };
   }
 
-  const builderEmail = issue.home.builderEmail?.trim().toLowerCase();
   const rawHomeownerEmails = [
     issue.home.primaryOwner?.email,
     issue.user?.email,
@@ -174,9 +196,14 @@ export async function processInboundEmail(event: InboundWebhookEvent) {
   const homeownerEmailMap = new Map(rawHomeownerEmails.map((e) => [e.toLowerCase(), e]));
   const homeownerEmails = Array.from(homeownerEmailMap.values());
 
-  const isFromBuilder = builderEmail && (from === builderEmail || fromAddress === builderEmail);
+  // Anyone who isn't a homeowner on this home is treated as the builder side, so replies from
+  // a different builder address (coworker, warranty@ alias) still reach the homeowner.
   const isFromHomeowner = homeownerEmails.some((e) => e.toLowerCase() === from || e.toLowerCase() === fromAddress);
-  const direction: IssueCommentDirection = isFromBuilder && !isFromHomeowner ? "BUILDER" : "HOMEOWNER";
+  const direction: IssueCommentDirection = isFromHomeowner ? "HOMEOWNER" : "BUILDER";
+  const issueReplyAddress = getIssueReplyAddress(issue.id);
+  // People already on the inbound email (e.g. via Reply All) don't need a relayed copy.
+  const alreadyReceived = new Set([fromAddress, ...recipientAddresses.map(parseEmailAddress)]);
+  const notYetReceived = (e: string) => !alreadyReceived.has(e.trim().toLowerCase());
 
   const existing = await prisma.issueComment.findUnique({
     where: { externalId: emailId },
@@ -207,10 +234,11 @@ export async function processInboundEmail(event: InboundWebhookEvent) {
   const inboundHtml = decodeDataUri(inbound.html);
 
   if (direction === "BUILDER") {
-    const [to, ...cc] = homeownerEmails;
+    const [to, ...cc] = homeownerEmails.filter(notYetReceived);
     if (to) {
       try {
         await sendEmail({
+          from: getIssueFromAddress(issue.id, builderDisplayName(issue.home.builderName, fromName)),
           to,
           cc,
           subject: `Re: ${inbound.subject}`,
@@ -218,7 +246,7 @@ export async function processInboundEmail(event: InboundWebhookEvent) {
           html: inboundHtml
             ? `<div style="font-family: sans-serif; padding: 16px;">${inboundHtml}<hr/><p style="color:#666;">Forwarded from ${fromName}<br/>Reply to this email to respond directly to your builder. Your message will be logged in New Home Warranty HQ.</p></div>`
             : undefined,
-          replyTo: matchedTo,
+          replyTo: issueReplyAddress,
           attachments,
         });
       } catch (err) {
@@ -226,18 +254,20 @@ export async function processInboundEmail(event: InboundWebhookEvent) {
       }
     }
   } else if (direction === "HOMEOWNER") {
-    const to = issue.home.builderEmail;
-    if (to) {
+    const to = issue.home.builderEmail?.trim();
+    const cc = homeownerEmails.filter(notYetReceived);
+    if (to && notYetReceived(to)) {
       try {
         await sendEmail({
+          from: getIssueFromAddress(issue.id, issue.home.primaryOwner?.name),
           to,
-          cc: homeownerEmails,
+          cc,
           subject: `Re: ${inbound.subject}`,
           text: `${content}\n\n— Forwarded from ${issue.home.primaryOwner?.name || "Homeowner"}\nReply to this email to respond directly to the homeowner. Your message will be logged in New Home Warranty HQ.`,
           html: inboundHtml
             ? `<div style="font-family: sans-serif; padding: 16px;">${inboundHtml}<hr/><p style="color:#666;">Forwarded from ${issue.home.primaryOwner?.name || "Homeowner"}<br/>Reply to this email to respond directly to the homeowner. Your message will be logged in New Home Warranty HQ.</p></div>`
             : undefined,
-          replyTo: matchedTo,
+          replyTo: issueReplyAddress,
           attachments,
         });
       } catch (err) {
@@ -247,4 +277,10 @@ export async function processInboundEmail(event: InboundWebhookEvent) {
   }
 
   return { ok: true, issueId: issue.id, direction };
+}
+
+function builderDisplayName(builderName: string | null | undefined, rawFrom: string): string | null {
+  if (builderName?.trim()) return builderName.trim();
+  const match = rawFrom.match(/^\s*"?([^"<]+?)"?\s*</);
+  return match ? match[1].trim() : null;
 }

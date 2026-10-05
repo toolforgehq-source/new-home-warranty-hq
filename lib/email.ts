@@ -11,6 +11,7 @@ export interface EmailAttachment {
 }
 
 export async function sendEmail({
+  from,
   to,
   cc,
   subject,
@@ -19,6 +20,7 @@ export async function sendEmail({
   replyTo,
   attachments,
 }: {
+  from?: string;
   to: string;
   cc?: string | string[];
   subject: string;
@@ -33,13 +35,13 @@ export async function sendEmail({
   }
 
   const result = await resend.emails.send({
-    from: fromEmail,
+    from: from ?? fromEmail,
     to,
     ...(cc ? { cc } : {}),
     subject,
     text,
     html,
-    ...(replyTo ? { reply_to: replyTo } : {}),
+    ...(replyTo ? { replyTo } : {}),
     ...(attachments?.length ? { attachments } : {}),
   });
 
@@ -47,6 +49,6 @@ export async function sendEmail({
     throw new Error(result.error.message);
   }
 
-  console.log("[email] sent", { to, cc, replyTo, subject, id: result.data?.id });
+  console.log("[email] sent", { from: from ?? fromEmail, to, cc, replyTo, subject, id: result.data?.id });
   return result;
 }

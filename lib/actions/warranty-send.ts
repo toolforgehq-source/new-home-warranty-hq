@@ -7,7 +7,7 @@ import type { ReactElement } from "react";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { sendEmail } from "@/lib/email";
-import { getIssueReplyAddress } from "@/lib/inbound";
+import { getIssueFromAddress, getIssueReplyAddress } from "@/lib/inbound";
 import { WarrantyRequestPDF } from "@/lib/pdf/warranty-request";
 import { getSignedDownloadUrl } from "@/lib/storage";
 import { hasActiveEntitlement } from "@/lib/entitlements";
@@ -110,6 +110,7 @@ export async function sendWarrantyRequestToBuilder(
 
   try {
     await sendEmail({
+      from: warrantyRequest.issueId ? getIssueFromAddress(warrantyRequest.issueId, homeownerName) : undefined,
       to: builderEmail,
       cc: homeownerEmail,
       subject,
