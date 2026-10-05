@@ -12,7 +12,7 @@ export function AppointmentForm({ issueId, home }: { issueId: string; home?: { b
       <p className="mt-1 text-sm text-gray-600">Track the builder’s visit and what was promised.</p>
       <input type="hidden" name="issueId" value={issueId} />
 
-      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+      <div className="mt-4 grid gap-4 sm:grid-cols-3">
         <div>
           <label htmlFor="appointmentDate" className="block text-sm font-medium text-navy">
             Appointment date
@@ -26,16 +26,42 @@ export function AppointmentForm({ issueId, home }: { issueId: string; home?: { b
           />
         </div>
         <div>
-          <label htmlFor="expectedRepairDate" className="block text-sm font-medium text-navy">
-            Expected repair date
+          <label htmlFor="appointmentStartTime" className="block text-sm font-medium text-navy">
+            Arrival time
           </label>
           <input
-            id="expectedRepairDate"
-            name="expectedRepairDate"
-            type="date"
+            id="appointmentStartTime"
+            name="appointmentStartTime"
+            type="time"
             className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2.5 text-navy focus:border-green focus:outline-none focus:ring-2 focus:ring-green/20"
           />
         </div>
+        <div>
+          <label htmlFor="appointmentEndTime" className="block text-sm font-medium text-navy">
+            Window ends <span className="font-normal text-gray-500">(optional)</span>
+          </label>
+          <input
+            id="appointmentEndTime"
+            name="appointmentEndTime"
+            type="time"
+            className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2.5 text-navy focus:border-green focus:outline-none focus:ring-2 focus:ring-green/20"
+          />
+        </div>
+      </div>
+      <p className="mt-2 text-xs text-gray-500">
+        If the builder gave you a window (e.g. 8 AM to 12 PM), enter both times.
+      </p>
+
+      <div className="mt-4 sm:w-1/3">
+        <label htmlFor="expectedRepairDate" className="block text-sm font-medium text-navy">
+          Expected repair date
+        </label>
+        <input
+          id="expectedRepairDate"
+          name="expectedRepairDate"
+          type="date"
+          className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2.5 text-navy focus:border-green focus:outline-none focus:ring-2 focus:ring-green/20"
+        />
       </div>
 
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -100,7 +126,7 @@ export function AppointmentForm({ issueId, home }: { issueId: string; home?: { b
         <div>
           <p className="text-sm font-medium text-navy">Email this appointment to the builder for confirmation</p>
           <p className="text-xs text-gray-500">
-            The builder will receive a confirmation link and can accept the proposed date.
+            The builder will receive a confirmation link and can accept the proposed date and time.
           </p>
           {!home?.builderEmail && (
             <p className="mt-1 text-xs text-amber-600">
