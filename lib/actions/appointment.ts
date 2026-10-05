@@ -10,6 +10,7 @@ import { hasActiveEntitlement } from "@/lib/entitlements";
 import { sendEmail } from "@/lib/email";
 import { getIssueFromAddress, getIssueReplyAddress } from "@/lib/inbound";
 import { APP_URL } from "@/lib/stripe";
+import { formatAppointmentWhen, parseTimeInput } from "@/lib/date";
 
 export async function createAppointment(
   _prevState: { error?: string } | null,
@@ -20,6 +21,8 @@ export async function createAppointment(
 
   const issueId = formData.get("issueId") as string;
   const appointmentDate = formData.get("appointmentDate") as string;
+  const appointmentStartTime = parseTimeInput(formData.get("appointmentStartTime"));
+  const appointmentEndTime = parseTimeInput(formData.get("appointmentEndTime"));
   const expectedRepairDate = (formData.get("expectedRepairDate") as string) || null;
   const builderRepresentative = (formData.get("builderRepresentative") as string)?.trim() || null;
   const trade = (formData.get("trade") as string)?.trim() || null;
@@ -27,6 +30,13 @@ export async function createAppointment(
   const partsOrdered = (formData.get("partsOrdered") as string)?.trim() || null;
   const notes = (formData.get("notes") as string)?.trim() || null;
   const proposeToBuilder = formData.get("proposeToBuilder") === "on";
+
+  if (appointmentEndTime && !appointmentStartTime) {
+    return { error: "Add an arrival time, or clear the end of the window." };
+  }
+  if (appointmentStartTime && appointmentEndTime && appointmentEndTime <= appointmentStartTime) {
+    return { error: "The end of the arrival window must be after the start." };
+  }
 
   const issue = await prisma.issue.findFirst({
     where: {
@@ -56,6 +66,8 @@ export async function createAppointment(
     data: {
       issueId,
       appointmentDate: appointmentDate ? new Date(appointmentDate) : null,
+      appointmentStartTime,
+      appointmentEndTime,
       expectedRepairDate: expectedRepairDate ? new Date(expectedRepairDate) : null,
       builderRepresentative,
       trade,
@@ -71,9 +83,14 @@ export async function createAppointment(
     const confirmUrl = `${APP_URL}/api/appointments/confirm?token=${appointment.confirmationToken}`;
     const homeownerName = issue.user?.name || session.user.name;
     const homeownerEmail = issue.user?.email || session.user.email;
+    const proposedWhen = formatAppointmentWhen(
+      appointment.appointmentDate,
+      appointment.appointmentStartTime,
+      appointment.appointmentEndTime
+    );
     const subject = `Appointment request: ${issue.title} at ${issue.home.address}`;
-    const text = `Hello,\n\n${homeownerName} has requested an appointment to address the following issue at ${issue.home.address}:\n\n${issue.title}\n\nProposed date: ${appointment.appointmentDate ? new Date(appointment.appointmentDate).toLocaleDateString() : "To be scheduled"}\n\nPlease confirm the appointment by clicking this link:\n${confirmUrl}\n\nIf the date does not work, simply reply to this email with alternatives; your reply will reach ${homeownerName ?? "the homeowner"} and be recorded in New Home Warranty HQ.\n\n— New Home Warranty HQ`;
-    const html = `<p>Hello,</p><p>${escapeHtml(homeownerName ?? "The homeowner")} has requested an appointment to address the following issue at <strong>${escapeHtml(issue.home.address)}</strong>:</p><p>${escapeHtml(issue.title)}</p><p>Proposed date: ${appointment.appointmentDate ? new Date(appointment.appointmentDate).toLocaleDateString() : "To be scheduled"}</p><p><a href="${confirmUrl}">Confirm appointment</a></p><p>If the date does not work, simply reply to this email with alternatives; your reply will reach ${escapeHtml(homeownerName ?? "the homeowner")} and be recorded in New Home Warranty HQ.</p><p>— New Home Warranty HQ</p>`;
+    const text = `Hello,\n\n${homeownerName} has requested an appointment to address the following issue at ${issue.home.address}:\n\n${issue.title}\n\nProposed time: ${proposedWhen}\n\nPlease confirm the appointment by clicking this link:\n${confirmUrl}\n\nIf this time does not work, simply reply to this email with alternatives; your reply will reach ${homeownerName ?? "the homeowner"} and be recorded in New Home Warranty HQ.\n\n— New Home Warranty HQ`;
+    const html = `<p>Hello,</p><p>${escapeHtml(homeownerName ?? "The homeowner")} has requested an appointment to address the following issue at <strong>${escapeHtml(issue.home.address)}</strong>:</p><p>${escapeHtml(issue.title)}</p><p>Proposed time: ${proposedWhen}</p><p><a href="${confirmUrl}">Confirm appointment</a></p><p>If this time does not work, simply reply to this email with alternatives; your reply will reach ${escapeHtml(homeownerName ?? "the homeowner")} and be recorded in New Home Warranty HQ.</p><p>— New Home Warranty HQ</p>`;
 
     try {
       await sendEmail({

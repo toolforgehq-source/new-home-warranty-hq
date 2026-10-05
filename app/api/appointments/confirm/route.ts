@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { sendEmail } from "@/lib/email";
 import { createSystemComment } from "@/lib/actions/comment";
 import { APP_URL } from "@/lib/stripe";
+import { formatAppointmentWhen } from "@/lib/date";
 
 export async function GET(request: NextRequest) {
   const token = request.nextUrl.searchParams.get("token");
@@ -74,16 +75,18 @@ export async function GET(request: NextRequest) {
       ].filter((e): e is string => Boolean(e))
     )
   );
-  const appointmentDate = appointment.appointmentDate
-    ? new Date(appointment.appointmentDate).toLocaleDateString()
-    : "To be scheduled";
+  const appointmentDate = formatAppointmentWhen(
+    appointment.appointmentDate,
+    appointment.appointmentStartTime,
+    appointment.appointmentEndTime
+  );
   const dashboardUrl = `${APP_URL}/dashboard/issues/${appointment.issueId}`;
 
   if (homeownerEmails.length > 0) {
     const [to, ...cc] = homeownerEmails;
     const subject = `Appointment confirmed: ${appointment.issue.title}`;
-    const text = `Good news — the builder confirmed the appointment for ${appointment.issue.title} at ${appointment.issue.home.address}.\n\nDate: ${appointmentDate}\n\nYou can view the issue in your dashboard: ${dashboardUrl}\n\n— New Home Warranty HQ`;
-    const html = `<p>Good news — the builder confirmed the appointment for <strong>${escapeHtml(appointment.issue.title)}</strong> at ${escapeHtml(appointment.issue.home.address)}.</p><p>Date: ${appointmentDate}</p><p><a href="${dashboardUrl}">View issue in dashboard</a></p><p>— New Home Warranty HQ</p>`;
+    const text = `Good news — the builder confirmed the appointment for ${appointment.issue.title} at ${appointment.issue.home.address}.\n\nWhen: ${appointmentDate}\n\nYou can view the issue in your dashboard: ${dashboardUrl}\n\n— New Home Warranty HQ`;
+    const html = `<p>Good news — the builder confirmed the appointment for <strong>${escapeHtml(appointment.issue.title)}</strong> at ${escapeHtml(appointment.issue.home.address)}.</p><p>When: ${appointmentDate}</p><p><a href="${dashboardUrl}">View issue in dashboard</a></p><p>— New Home Warranty HQ</p>`;
 
     try {
       await sendEmail({ to, cc, subject, text, html });

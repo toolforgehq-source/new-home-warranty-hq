@@ -682,6 +682,8 @@ model Appointment {
   issueId               String
   issue                 Issue              @relation(fields: [issueId], references: [id], onDelete: Cascade)
   appointmentDate       DateTime?
+  appointmentStartTime  String?
+  appointmentEndTime    String?
   builderRepresentative String?
   trade                 String?
   expectedRepairDate    DateTime?

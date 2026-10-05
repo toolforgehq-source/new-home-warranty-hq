@@ -8,6 +8,7 @@ import { SubmissionForm } from "./SubmissionForm";
 import { AppointmentForm } from "./AppointmentForm";
 import { RepairVerificationForm } from "./RepairVerificationForm";
 import { IssueCommentThread } from "./IssueCommentThread";
+import { formatAppointmentWhen } from "@/lib/date";
 
 export default async function IssueDetailPage({
   params,
@@ -182,7 +183,7 @@ export default async function IssueDetailPage({
                 <li key={appt.id} className="rounded-xl bg-gray-50 p-4 text-sm">
                   <div className="flex items-center justify-between">
                     <span className="font-semibold text-navy">
-                      {appt.appointmentDate ? new Date(appt.appointmentDate).toLocaleDateString() : "No date"}
+                      {formatAppointmentWhen(appt.appointmentDate, appt.appointmentStartTime, appt.appointmentEndTime, "No date")}
                     </span>
                     <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium capitalize text-navy">
                       {appt.status.toLowerCase()}
