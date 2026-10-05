@@ -13,6 +13,25 @@ export function getIssueReplyAddress(issueId: string, domain = inboundDomain) {
   return `issue-${issueId}@${domain}`;
 }
 
+function emailDomain(address: string): string {
+  return parseEmailAddress(address).split("@")[1] ?? "";
+}
+
+function sanitizeDisplayName(name: string): string {
+  return name.replace(/["<>\r\n\\]/g, "").replace(/\s+/g, " ").trim();
+}
+
+/**
+ * Sends issue emails from the issue's inbound address so a plain "Reply" lands in the dashboard
+ * even when a mail client ignores Reply-To. Falls back to the default sender when the inbound
+ * domain differs from the verified sending domain.
+ */
+export function getIssueFromAddress(issueId: string, displayName?: string | null) {
+  if (emailDomain(fromEmail) !== inboundDomain.toLowerCase()) return undefined;
+  const name = sanitizeDisplayName(displayName ? `${displayName} via New Home Warranty HQ` : "New Home Warranty HQ");
+  return `"${name}" <${getIssueReplyAddress(issueId)}>`;
+}
+
 export function parseIssueIdFromEmail(to: string, domain = inboundDomain): string | null {
   const address = to.toLowerCase().trim();
   const parts = address.split("@");
@@ -161,7 +180,8 @@ export async function processInboundEmail(event: InboundWebhookEvent) {
     (fromAddress === appEmailAddress ||
       from === appEmailAddress ||
       from.endsWith(`<${appEmailAddress}>`));
-  if (fromOurDomain) {
+  const fromIssueAddress = !!parseIssueIdFromEmail(fromAddress);
+  if (fromOurDomain || fromIssueAddress) {
     return { skipped: true, reason: "Ignored email from ourselves" };
   }
 
@@ -211,6 +231,7 @@ export async function processInboundEmail(event: InboundWebhookEvent) {
     if (to) {
       try {
         await sendEmail({
+          from: getIssueFromAddress(issue.id, builderDisplayName(issue.home.builderName, fromName)),
           to,
           cc,
           subject: `Re: ${inbound.subject}`,
@@ -230,6 +251,7 @@ export async function processInboundEmail(event: InboundWebhookEvent) {
     if (to) {
       try {
         await sendEmail({
+          from: getIssueFromAddress(issue.id, issue.home.primaryOwner?.name),
           to,
           cc: homeownerEmails,
           subject: `Re: ${inbound.subject}`,
@@ -247,4 +269,10 @@ export async function processInboundEmail(event: InboundWebhookEvent) {
   }
 
   return { ok: true, issueId: issue.id, direction };
+}
+
+function builderDisplayName(builderName: string | null | undefined, rawFrom: string): string | null {
+  if (builderName?.trim()) return builderName.trim();
+  const match = rawFrom.match(/^\s*"?([^"<]+?)"?\s*</);
+  return match ? match[1].trim() : null;
 }

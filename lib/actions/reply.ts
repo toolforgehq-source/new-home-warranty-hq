@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { sendEmail } from "@/lib/email";
-import { getIssueReplyAddress } from "@/lib/inbound";
+import { getIssueFromAddress, getIssueReplyAddress } from "@/lib/inbound";
 import { generateReplySuggestion } from "@/lib/ai";
 import { trackEvent } from "@/lib/analytics";
 import { logAudit } from "@/lib/audit";
@@ -59,6 +59,7 @@ export async function replyToBuilder(_prevState: { error?: string } | null, form
     );
     try {
       await sendEmail({
+        from: getIssueFromAddress(issue.id, fromName),
         to: builderEmail,
         cc,
         subject,

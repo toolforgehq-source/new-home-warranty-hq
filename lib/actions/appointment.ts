@@ -8,7 +8,7 @@ import { trackEvent } from "@/lib/analytics";
 import { logAudit } from "@/lib/audit";
 import { hasActiveEntitlement } from "@/lib/entitlements";
 import { sendEmail } from "@/lib/email";
-import { getIssueReplyAddress } from "@/lib/inbound";
+import { getIssueFromAddress, getIssueReplyAddress } from "@/lib/inbound";
 import { APP_URL } from "@/lib/stripe";
 
 export async function createAppointment(
@@ -77,6 +77,7 @@ export async function createAppointment(
 
     try {
       await sendEmail({
+        from: getIssueFromAddress(issueId, homeownerName),
         to: builderEmail!,
         cc: homeownerEmail,
         subject,
