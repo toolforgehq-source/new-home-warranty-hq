@@ -6,7 +6,7 @@ import { Menu, X } from "lucide-react";
 import { Logo } from "./Logo";
 
 const nav = [
-  { label: "How It Works", href: "/#how-it-works" },
+  { label: "How It Works", href: "/#product" },
   { label: "Features", href: "/#features" },
   { label: "Why It Matters", href: "/#why-it-matters" },
   { label: "Pricing", href: "/#pricing" },

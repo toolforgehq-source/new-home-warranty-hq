@@ -32,8 +32,9 @@ export function ProblemCards() {
             Why warranty issues get missed
           </h2>
           <p className="mt-4 text-lg text-gray-600">
-            New homes come with a lot to remember. Without a system, important
-            details slip through the cracks.
+            Settling cracks, sticking doors, nail pops, and drainage problems
+            often show up in the first year. Report them while the details are
+            fresh and your coverage is still open.
           </p>
         </div>
         <div className="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
