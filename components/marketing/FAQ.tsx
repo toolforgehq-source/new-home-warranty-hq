@@ -30,7 +30,7 @@ const faqs = [
   },
   {
     q: "Do you communicate with my builder for me?",
-    a: "The software helps prepare and organize communication, but the homeowner reviews and controls submissions.",
+    a: "You write or approve every request and reply. The app emails it to your builder and logs the builder's replies in your dashboard. Suggested wording is only a draft for you to edit. New Home Warranty HQ never contacts your builder on its own or decides what to tell them.",
   },
   {
     q: "Can my realtor or lender see my issues?",

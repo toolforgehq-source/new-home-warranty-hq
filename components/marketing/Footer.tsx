@@ -17,7 +17,7 @@ export function Footer() {
             <h3 className="text-sm font-semibold">Product</h3>
             <ul className="mt-4 space-y-2 text-sm text-white/70">
               <li>
-                <Link href="/#how-it-works" className="hover:text-white">
+                <Link href="/#product" className="hover:text-white">
                   How It Works
                 </Link>
               </li>

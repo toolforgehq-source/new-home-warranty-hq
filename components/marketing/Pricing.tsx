@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Check, ShieldCheck } from "lucide-react";
+import { Check, Lock, ShieldCheck } from "lucide-react";
 
 export function Pricing() {
   return (
@@ -22,8 +22,9 @@ export function Pricing() {
             <span className="text-gray-500">one-time payment</span>
           </div>
           <p className="mt-4 text-gray-600">
-            Everything you need to document, report, track, and prove every
-            warranty item in your new home.
+            One payment covers your entire builder warranty period: everything
+            you need to document, report, track, and prove every warranty item
+            in your new home.
           </p>
           <ul className="mt-6 space-y-3 text-gray-600">
             {[
@@ -54,6 +55,27 @@ export function Pricing() {
               See refund policy
             </Link>
           </p>
+          <p className="mt-1 flex items-center justify-center gap-2 text-sm text-gray-500">
+            <Lock className="h-4 w-4" /> Secure checkout with Stripe
+          </p>
+
+          <div className="mt-8 rounded-xl bg-gray-50 p-5">
+            <p className="font-semibold text-navy">What happens after you buy</p>
+            <ol className="mt-3 space-y-3 text-sm text-gray-600">
+              {[
+                "Set up your home in a few minutes: address, closing date, and builder contact.",
+                "Confirm your builder's warranty terms to turn on deadline reminders.",
+                "Report issues from your phone. Requests are emailed to your builder, and their replies land in your dashboard.",
+              ].map((step, i) => (
+                <li key={step} className="flex items-start gap-3">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green text-xs font-bold text-white">
+                    {i + 1}
+                  </span>
+                  {step}
+                </li>
+              ))}
+            </ol>
+          </div>
         </div>
 
         <p className="mt-8 text-center text-sm text-gray-500">
