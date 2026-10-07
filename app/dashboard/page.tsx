@@ -3,7 +3,8 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { daysSince, addMonths } from "@/lib/date";
+import { daysSince } from "@/lib/date";
+import { formatCoverageDate, formatTerm, getCoverageWindows } from "@/lib/warranty-windows";
 
 const entitlementBlockedMessage = (
   <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-amber-900">
@@ -48,7 +49,8 @@ export default async function DashboardPage() {
   }
 
   const daysSinceClosing = home ? daysSince(home.closingDate) : null;
-  const recommended11Month = home ? addMonths(home.closingDate, 11) : null;
+  const coverageWindows = home ? getCoverageWindows(home) : [];
+  const coverageConfirmed = Boolean(home?.coverageConfirmedAt);
   const hasActiveEntitlement =
     home?.entitlements.some((e) => e.status === "ACTIVE") ?? false;
 
@@ -118,13 +120,63 @@ export default async function DashboardPage() {
                     <p className="text-sm text-gray-500">Days since closing</p>
                     <p className="mt-1 font-semibold text-navy">{daysSinceClosing}</p>
                   </div>
-                  <div className="rounded-xl bg-gray-50 p-4">
-                    <p className="text-sm text-gray-500">Recommended 11-month review</p>
-                    <p className="mt-1 font-semibold text-navy">
-                      {recommended11Month?.toLocaleDateString()}
-                    </p>
-                    <p className="mt-1 text-xs text-gray-500">Recommended — verify with your builder documents</p>
+                </div>
+                <div className="mt-6">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <h3 className="font-semibold text-navy">Builder warranty coverage</h3>
+                    {coverageConfirmed && (
+                      <Link href="/dashboard/home" className="text-sm text-green hover:underline">
+                        Edit terms
+                      </Link>
+                    )}
                   </div>
+                  {!coverageConfirmed && coverageWindows.length > 0 && (
+                    <div className="mt-3 flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 sm:flex-row sm:items-center sm:justify-between">
+                      <p>
+                        <span className="font-semibold">Suggested, not confirmed.</span> These are common
+                        builder terms. Check them against your warranty document to turn on deadline reminders.
+                      </p>
+                      <Link
+                        href="/dashboard/home"
+                        className="shrink-0 rounded-full bg-navy px-4 py-2 text-center font-semibold text-white hover:bg-navy-700"
+                      >
+                        Confirm your coverage
+                      </Link>
+                    </div>
+                  )}
+                  {coverageWindows.length === 0 ? (
+                    <p className="mt-2 text-sm text-gray-500">
+                      No coverage terms set. Add them from your builder&apos;s warranty document to get reminders before each one ends.
+                    </p>
+                  ) : (
+                    <ul className="mt-3 divide-y divide-gray-100 rounded-xl bg-gray-50">
+                      {coverageWindows.map((w) => (
+                        <li key={w.key} className="flex items-center justify-between gap-4 p-4">
+                          <div>
+                            <p className="font-medium text-navy">{w.label}</p>
+                            <p className="text-sm text-gray-500">
+                              {formatTerm(w.months)} &bull; {w.ended ? "ended" : "ends"} {formatCoverageDate(w.endsAt)}
+                            </p>
+                          </div>
+                          <span
+                            className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold ${
+                              w.ended
+                                ? "bg-gray-200 text-gray-600"
+                                : w.daysLeft <= 60
+                                  ? "bg-amber-100 text-amber-800"
+                                  : "bg-green-50 text-green-700"
+                            }`}
+                          >
+                            {w.ended ? "Ended" : `${w.daysLeft} days left`}
+                            {!coverageConfirmed && !w.ended ? " (suggested)" : ""}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <p className="mt-2 text-xs text-gray-500">
+                    Counted from your closing date. Verify the exact terms in your builder&apos;s warranty document.
+                  </p>
                 </div>
                 {hasActiveEntitlement ? (
                   <div className="mt-6 flex flex-wrap gap-3">

@@ -27,7 +27,7 @@ export default async function HomeSettingsPage() {
           &larr; Back to dashboard
         </Link>
         <h1 className="mt-4 text-2xl font-bold text-navy">Home details</h1>
-        <p className="mt-2 text-gray-600">Keep builder contact info up to date so warranty requests go to the right place.</p>
+        <p className="mt-2 text-gray-600">Keep builder contact info and warranty terms up to date so requests go to the right place and reminders land on time.</p>
 
         <div className="mt-6 rounded-2xl bg-white p-6 shadow-sm">
           <HomeForm home={home} />

@@ -4,6 +4,17 @@ import Link from "next/link";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { DismissButton } from "./DismissButton";
+import { COVERAGE_KINDS, formatCoverageDate } from "@/lib/warranty-windows";
+
+function reminderTitle(type: string, metadata: unknown): string {
+  if (type === "COVERAGE_ENDING") {
+    const meta = (metadata ?? {}) as { coverage?: string; endsAt?: string };
+    const kind = COVERAGE_KINDS.find((k) => k.key === meta.coverage);
+    if (kind && meta.endsAt) return `${kind.label} coverage ends ${formatCoverageDate(new Date(meta.endsAt))}`;
+  }
+  const label = type.toLowerCase().replace(/_/g, " ");
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
 
 export default async function RemindersPage() {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -27,9 +38,7 @@ export default async function RemindersPage() {
               <li key={r.id} className="rounded-2xl bg-white p-6 shadow-sm">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="font-semibold capitalize text-navy">
-                      {r.type.toLowerCase().replace(/_/g, " ")}
-                    </p>
+                    <p className="font-semibold text-navy">{reminderTitle(r.type, r.metadata)}</p>
                     {r.issue && (
                       <Link href={`/dashboard/issues/${r.issue.id}`} className="text-sm text-green hover:text-green-600">
                         {r.issue.title}
