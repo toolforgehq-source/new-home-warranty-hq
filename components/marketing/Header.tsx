@@ -4,9 +4,10 @@ import Link from "next/link";
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { Logo } from "./Logo";
+import { SectionLink } from "./SectionLink";
 
 const nav = [
-  { label: "How It Works", href: "/#how-it-works" },
+  { label: "How It Works", href: "/#product" },
   { label: "Features", href: "/#features" },
   { label: "Why It Matters", href: "/#why-it-matters" },
   { label: "Pricing", href: "/#pricing" },
@@ -26,13 +27,13 @@ export function Header() {
 
         <nav className="hidden items-center gap-8 lg:flex">
           {nav.map((item) => (
-            <Link
+            <SectionLink
               key={item.href}
               href={item.href}
               className="text-sm font-medium text-white/90 hover:text-white"
             >
               {item.label}
-            </Link>
+            </SectionLink>
           ))}
         </nav>
 
@@ -64,14 +65,14 @@ export function Header() {
         <div className="border-t border-white/10 bg-navy px-6 py-6 lg:hidden">
           <nav className="flex flex-col gap-4">
             {nav.map((item) => (
-              <Link
+              <SectionLink
                 key={item.href}
                 href={item.href}
                 onClick={() => setOpen(false)}
                 className="text-base font-medium text-white/90 hover:text-white"
               >
                 {item.label}
-              </Link>
+              </SectionLink>
             ))}
             <Link
               href="/login"

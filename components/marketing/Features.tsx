@@ -13,7 +13,7 @@ import {
 const features = [
   {
     title: "Warranty deadline reminders",
-    body: "We track your closing date and warranty windows and nudge you before they pass, so you never find out too late.",
+    body: "Confirm your builder's coverage terms once. We remind you 60 and 14 days before each warranty window closes.",
     icon: BellRing,
     highlight: true,
   },

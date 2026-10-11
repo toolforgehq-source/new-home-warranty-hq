@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SectionLink } from "./SectionLink";
 import { Logo } from "./Logo";
 
 export function Footer() {
@@ -17,19 +18,19 @@ export function Footer() {
             <h3 className="text-sm font-semibold">Product</h3>
             <ul className="mt-4 space-y-2 text-sm text-white/70">
               <li>
-                <Link href="/#how-it-works" className="hover:text-white">
+                <SectionLink href="/#product" className="hover:text-white">
                   How It Works
-                </Link>
+                </SectionLink>
               </li>
               <li>
-                <Link href="/#features" className="hover:text-white">
+                <SectionLink href="/#features" className="hover:text-white">
                   Features
-                </Link>
+                </SectionLink>
               </li>
               <li>
-                <Link href="/#pricing" className="hover:text-white">
+                <SectionLink href="/#pricing" className="hover:text-white">
                   Pricing
-                </Link>
+                </SectionLink>
               </li>
               <li>
                 <Link href="/partners" className="hover:text-white">
