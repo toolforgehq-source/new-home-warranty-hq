@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { trackEvent } from "@/lib/analytics";
 import { logAudit } from "@/lib/audit";
+import { COVERAGE_KINDS, parseCoverageMonths, type CoverageField } from "@/lib/warranty-windows";
 
 export async function updateHome(_prevState: { error?: string } | null, formData: FormData) {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -19,6 +20,14 @@ export async function updateHome(_prevState: { error?: string } | null, formData
   const builderWarrantyPortalUrl = (formData.get("builderWarrantyPortalUrl") as string)?.trim() || null;
 
   if (!builderName) return { error: "Builder name is required." };
+
+  const coverageTerms: Partial<Record<CoverageField, number | null>> = {};
+  for (const kind of COVERAGE_KINDS) {
+    const months = parseCoverageMonths(formData.get(kind.field));
+    if (months === "invalid") return { error: `Choose a valid ${kind.label.toLowerCase()} coverage term.` };
+    coverageTerms[kind.field] = months;
+  }
+  const coverageConfirmedAt = formData.get("coverageConfirmed") === "on" ? new Date() : null;
 
   const home = await prisma.home.findFirst({
     where: {
@@ -40,6 +49,8 @@ export async function updateHome(_prevState: { error?: string } | null, formData
       builderPhone,
       builderContactName,
       builderWarrantyPortalUrl,
+      ...coverageTerms,
+      coverageConfirmedAt,
     },
   });
 

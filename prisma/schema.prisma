@@ -159,6 +159,7 @@ enum ReminderType {
   WARRANTY_REVIEW_UPCOMING
   DOCUMENT_MISSING
   FINAL_REVIEW
+  COVERAGE_ENDING
 }
 
 enum ReminderChannel {
@@ -317,6 +318,12 @@ model Home {
   builderPhone             String?
   builderWarrantyPortalUrl String?
   thirdPartyWarrantyCompany String?
+  // Builder warranty terms in months, counted from closingDate; null = not covered / not listed.
+  // Defaults are suggestions only; coverage reminders run once the homeowner confirms them.
+  workmanshipWarrantyMonths Int?      @default(12)
+  systemsWarrantyMonths     Int?      @default(24)
+  structuralWarrantyMonths  Int?      @default(120)
+  coverageConfirmedAt       DateTime?
   state                    String?
   propertyCharacteristics  Json?
   primaryOwnerId           String

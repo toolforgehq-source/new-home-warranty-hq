@@ -1,5 +1,6 @@
 import prisma from "@/lib/prisma";
 import { ReminderType } from "@prisma/client";
+import { dueCoverageReminder, getCoverageWindows } from "@/lib/warranty-windows";
 
 type Candidate = {
   userId: string;
@@ -140,7 +141,6 @@ export async function generateReminders() {
     if (reminder) created.push(reminder.id);
   }
 
-  // Warranty review 30 days before recommended 11-month review
   const homes = await prisma.home.findMany({
     include: {
       primaryOwner: true,
@@ -151,17 +151,35 @@ export async function generateReminders() {
 
   for (const home of homes) {
     const closing = home.closingDate;
-    const reviewDate = new Date(closing.getFullYear(), closing.getMonth() + 11, closing.getDate());
-    const reminderDue = new Date(reviewDate.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-    if (now >= reminderDue && now <= reviewDate) {
-      const reminder = await createIfNeeded({
-        userId: home.primaryOwnerId,
-        homeId: home.id,
-        type: "WARRANTY_REVIEW_UPCOMING",
-        dueDate: reminderDue,
+    // Each confirmed builder coverage window gets a reminder 60 and 14 days before it ends
+    for (const window of home.coverageConfirmedAt ? getCoverageWindows(home, now) : []) {
+      const stage = dueCoverageReminder(window, now);
+      if (!stage) continue;
+      const existing = await prisma.reminder.findFirst({
+        where: {
+          homeId: home.id,
+          type: "COVERAGE_ENDING",
+          dueDate: stage.dueDate,
+          metadata: { path: ["coverage"], equals: window.key },
+        },
       });
-      if (reminder) created.push(reminder.id);
+      if (existing) continue;
+      const reminder = await prisma.reminder.create({
+        data: {
+          userId: home.primaryOwnerId,
+          homeId: home.id,
+          type: "COVERAGE_ENDING",
+          dueDate: stage.dueDate,
+          metadata: {
+            coverage: window.key,
+            months: window.months,
+            endsAt: window.endsAt.toISOString(),
+            daysBefore: stage.daysBefore,
+          },
+        },
+      });
+      created.push(reminder.id);
     }
 
     // Missing builder warranty document after 7 days
