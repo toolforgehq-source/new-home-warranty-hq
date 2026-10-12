@@ -7,8 +7,12 @@ export function AppointmentForm({ issueId, home }: { issueId: string; home?: { b
   const [state, action, pending] = useActionState(createAppointment, null);
 
   return (
-    <form action={action} className="mt-6 rounded-2xl bg-white p-6 shadow-sm">
-      <h2 className="font-semibold text-navy">Schedule appointment</h2>
+    <details className="group mt-6 rounded-2xl bg-white p-6 shadow-sm">
+      <summary className="cursor-pointer list-none font-semibold text-green group-open:mb-2 group-open:text-navy">
+        <span className="group-open:hidden">+ Add appointment</span>
+        <span className="hidden group-open:inline">Schedule appointment</span>
+      </summary>
+      <form action={action}>
       <p className="mt-1 text-sm text-gray-600">Track the builder’s visit and what was promised.</p>
       <input type="hidden" name="issueId" value={issueId} />
 
@@ -148,5 +152,6 @@ export function AppointmentForm({ issueId, home }: { issueId: string; home?: { b
         {pending ? "Saving..." : "Save appointment"}
       </button>
     </form>
+    </details>
   );
 }
