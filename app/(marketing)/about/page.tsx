@@ -3,6 +3,9 @@ import { LegalSection, LegalList } from "@/components/marketing/LegalSection";
 
 export const metadata = {
   title: "About — New Home Warranty HQ",
+  description:
+    "Why New Home Warranty HQ exists: a homeowner-controlled way to document new-construction defects, send builder warranty requests, and keep a complete repair record.",
+  alternates: { canonical: "/about" },
 };
 
 export default function AboutPage() {

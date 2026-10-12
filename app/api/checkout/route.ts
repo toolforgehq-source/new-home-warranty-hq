@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { trackEvent } from "@/lib/analytics";
+import { SOURCE_COOKIE, VISITOR_COOKIE } from "@/lib/funnel";
 import { isStripeConfigured, stripe, STRIPE_PRICE_HOMEOWNER, STRIPE_PRICE_GIFT } from "@/lib/stripe";
 
 export async function POST(request: NextRequest) {
@@ -23,6 +25,9 @@ export async function POST(request: NextRequest) {
   }
 
   const session = await auth.api.getSession({ headers: await headers() });
+  const anonymousId = request.cookies.get(VISITOR_COOKIE)?.value;
+  const source = request.cookies.get(SOURCE_COOKIE)?.value ?? "direct";
+  const attribution = { source, ...(anonymousId && { anonymousId }) };
 
   try {
     if (body.product === "homeowner") {
@@ -43,7 +48,7 @@ export async function POST(request: NextRequest) {
         success_url: `${origin}/onboarding?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${origin}/#pricing`,
         client_reference_id: purchase.id,
-        metadata: { productType: "HOMEOWNER", purchaseId: purchase.id },
+        metadata: { productType: "HOMEOWNER", purchaseId: purchase.id, ...attribution },
         automatic_tax:
           process.env.STRIPE_TAX_BEHAVIOR === "automatic_tax"
             ? { enabled: true }
@@ -54,6 +59,13 @@ export async function POST(request: NextRequest) {
       await prisma.purchase.update({
         where: { id: purchase.id },
         data: { stripeCheckoutSessionId: stripeSession.id },
+      });
+
+      await trackEvent({
+        event: "checkout_started",
+        userId: session?.user?.id,
+        anonymousId,
+        properties: { productType: "HOMEOWNER", purchaseId: purchase.id, source },
       });
 
       return NextResponse.json({ checkoutUrl: stripeSession.url });
@@ -111,6 +123,7 @@ export async function POST(request: NextRequest) {
         productType: "GIFT",
         purchaseId: result.purchase.id,
         giftPurchaseId: result.giftPurchase.id,
+        ...attribution,
       },
       automatic_tax:
         process.env.STRIPE_TAX_BEHAVIOR === "automatic_tax"
@@ -122,6 +135,13 @@ export async function POST(request: NextRequest) {
     await prisma.purchase.update({
       where: { id: result.purchase.id },
       data: { stripeCheckoutSessionId: stripeSession.id },
+    });
+
+    await trackEvent({
+      event: "checkout_started",
+      userId: session.user.id,
+      anonymousId,
+      properties: { productType: "GIFT", purchaseId: result.purchase.id, source },
     });
 
     return NextResponse.json({ checkoutUrl: stripeSession.url });

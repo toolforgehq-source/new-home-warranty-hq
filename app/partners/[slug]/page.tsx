@@ -14,6 +14,7 @@ export async function generateMetadata({
   const company = profile?.company || "Your partner";
   return {
     title: `${company} recommends New Home Warranty HQ`,
+    alternates: { canonical: `/partners/${slug}` },
   };
 }
 

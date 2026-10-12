@@ -4,6 +4,7 @@ export const metadata = {
   title: "For Partners — New Home Warranty HQ",
   description:
     "Give new-construction buyers a closing gift they will actually use. Title companies, lenders, realtors, and inspectors can gift New Home Warranty HQ in one step.",
+  alternates: { canonical: "/partners" },
 };
 
 export default function PartnersPage() {

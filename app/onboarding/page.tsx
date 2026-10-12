@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import prisma from "@/lib/prisma";
 import OnboardingForm from "./OnboardingForm";
+import { GiftFrom } from "@/components/GiftFrom";
 
 function OnboardingFinalizing() {
   return (
@@ -60,9 +61,31 @@ export default async function OnboardingPage({
   if (tokenParam) {
     const error = await validateToken(tokenParam);
     if (error) return <OnboardingError message={error} />;
+    const gift = (
+      await prisma.onboardingToken.findUnique({
+        where: { token: tokenParam },
+        select: {
+          giftPurchase: {
+            select: {
+              giftMessage: true,
+              partner: { select: { name: true, partnerProfile: { select: { company: true, logoUrl: true } } } },
+            },
+          },
+        },
+      })
+    )?.giftPurchase;
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50 px-6 py-12">
         <div className="w-full max-w-lg rounded-2xl bg-white p-8 shadow-sm">
+          {gift && (
+            <GiftFrom
+              name={gift.partner.name}
+              company={gift.partner.partnerProfile?.company}
+              logoUrl={gift.partner.partnerProfile?.logoUrl}
+              message={gift.giftMessage}
+              className="mb-6"
+            />
+          )}
           <h1 className="text-2xl font-bold text-navy">Set up your home</h1>
           <p className="mt-2 text-gray-600">
             Welcome to New Home Warranty HQ. Let&apos;s get your property information

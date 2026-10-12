@@ -3,6 +3,9 @@ import { LegalSection, LegalList } from "@/components/marketing/LegalSection";
 
 export const metadata = {
   title: "Terms of Service — New Home Warranty HQ",
+  description:
+    "The terms of service for using New Home Warranty HQ.",
+  alternates: { canonical: "/terms" },
 };
 
 export default function TermsPage() {
