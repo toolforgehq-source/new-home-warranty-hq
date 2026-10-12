@@ -85,3 +85,22 @@ The page should return `Appointment confirmed` and update `Issue.status` to `SCH
 - Choose the closing date during onboarding to exercise near-ending or ended warranty coverage windows without DB writes. Native date inputs may need month/day/year segments filled separately; check the displayed date before submitting.
 - Keep UI checks separate from runtime claims: without DB and `CRON_SECRET`, mark reminder gating, 60/14-day generation, dedup, and titles as untested (they're unit-tested in `__tests__/warranty-windows.test.ts`).
 - For hash-link navigation, also test reusing the same hash after manually scrolling away; a correct href alone doesn't prove the page scrolls.
+
+## Local testing (Postgres + Moto S3, no provider secrets)
+### Local services and fixture continuity
+- Reuse an existing Next server when provided. This app can be browser-tested with local Postgres and an S3-compatible mock; provider-free coverage includes authenticated issue CRUD, private notes, appointments without email proposals, repair verification, request PDFs from seeded requests, and full-record ZIP export.
+- A verified local configuration used Postgres container `nhw-pg` on `54329`, database `nhw`, Moto on `9010`, bucket `nhw`, and Next on `3000`. Treat these as examples and check the actual `.env.local` before starting duplicate services.
+- Configure `DATABASE_URL`, `BETTER_AUTH_URL`, `NEXT_PUBLIC_APP_URL`, `R2_ENDPOINT`, `R2_BUCKET_NAME`, `R2_ACCESS_KEY_ID`, and `R2_SECRET_ACCESS_KEY` for the local services. Use local-only storage credentials.
+- S3 signed links use bucket virtual-host addressing (for example `nhw.localhost:9010`). Confirm the browser and Next process can resolve that host before diagnosing broken thumbnails as application bugs.
+- Moto's objects may disappear on restart even when Postgres survives. Re-create the bucket and restore each document at its existing database `fileKey`; recreating only the bucket leaves broken images and incomplete exports.
+- Never restore demo data in staging/production without explicit authorization. Isolate QA issue mutations where practical; resolving an issue changes dashboard counts and hides its latest builder-reply preview.
+
+### Browser checks
+- On the appointment form, leave “Email this appointment to the builder for confirmation” unchecked when email credentials are unavailable. Check displayed native date/time segments before saving; keyboard entry can auto-advance segments.
+- Photo validation must preserve earlier accepted selections. Test add, remove, add again, reject >10 total files, reject a >10 MiB file, then save and check the persisted file set, not just the thumbnails.
+- Compare the downloaded ZIP's photo bytes against original fixtures to verify accepted/removal state really reached storage.
+- Seeded sent-request content is sufficient to exercise the request preview and real PDF endpoint without calling AI or email.
+- Export completes with `Status: READY`, not `COMPLETED`. ZIP contents live under an address-named root directory, so search for `*/home.json` rather than requiring root-level `home.json`.
+- `communications/` is populated for issues with comments; `requests/` requires saved warranty requests. `warranty-documents/` requires a home-level warranty document. If absent, upload a clearly labeled sample PDF through Documents before testing that folder.
+- Verify logout by explicitly navigating to `/dashboard` afterward and checking the `/login` redirect.
+

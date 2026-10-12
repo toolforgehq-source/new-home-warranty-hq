@@ -49,12 +49,22 @@ export async function uploadBuffer(key: string, buffer: Buffer, contentType: str
   );
 }
 
-export async function getSignedDownloadUrl(key: string, expiresInSeconds = 60 * 60) {
+export async function getSignedDownloadUrl(
+  key: string,
+  expiresInSeconds = 60 * 60,
+  downloadName?: string
+) {
   if (!client) throw new Error("Storage is not configured");
 
   return getSignedUrl(
     client,
-    new GetObjectCommand({ Bucket: bucket, Key: key }),
+    new GetObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      ...(downloadName && {
+        ResponseContentDisposition: `attachment; filename="${downloadName.replace(/["\\\r\n]/g, "")}"`,
+      }),
+    }),
     { expiresIn: expiresInSeconds }
   );
 }

@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
     const key = `exports/${home.id}/${job.id}.zip`;
     await uploadBuffer(key, zipBuffer, "application/zip");
 
-    const downloadUrl = await getSignedDownloadUrl(key, 7 * 24 * 60 * 60);
+    const downloadUrl = await getSignedDownloadUrl(key, 7 * 24 * 60 * 60, `${folder}.zip`);
 
     await prisma.exportJob.update({
       where: { id: job.id },

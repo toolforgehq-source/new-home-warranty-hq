@@ -185,7 +185,7 @@ export default async function DashboardPage() {
                           )}
                           <div className="min-w-0 flex-1">
                             <p className="line-clamp-2 font-semibold text-navy">{issue.title}</p>
-                            <p className="truncate text-sm text-gray-500">
+                            <p className="line-clamp-2 text-sm text-gray-500">
                               {issue.location || issue.category.charAt(0) + issue.category.slice(1).toLowerCase().replace("_", " / ")}
                               {" "}&bull; {statusDetail[issue.status] ?? issue.status.toLowerCase()}
                             </p>
