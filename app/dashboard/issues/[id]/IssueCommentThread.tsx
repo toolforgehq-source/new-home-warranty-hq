@@ -3,12 +3,17 @@
 import { useActionState, useState } from "react";
 import { addIssueComment, logBuilderReply } from "@/lib/actions/comment";
 import { replyToBuilder, suggestReply } from "@/lib/actions/reply";
+import { builderSenderLabel } from "@/lib/issue-progress";
 
 export function IssueCommentThread({
   issueId,
   comments,
+  builderName,
+  currentUserId,
 }: {
   issueId: string;
+  builderName: string;
+  currentUserId: string;
   comments: {
     id: string;
     direction: string;
@@ -16,7 +21,7 @@ export function IssueCommentThread({
     emailFrom: string | null;
     isInternal: boolean;
     createdAt: Date;
-    user: { name: string } | null;
+    user: { id: string; name: string } | null;
   }[];
 }) {
   const [replyState, replyAction, replyPending] = useActionState(replyToBuilder, null);
@@ -26,11 +31,6 @@ export function IssueCommentThread({
 
   const [replyContent, setReplyContent] = useState("");
 
-  const directionStyles: Record<string, string> = {
-    HOMEOWNER: "bg-green-50 border-green-200",
-    BUILDER: "bg-blue-50 border-blue-200",
-    SYSTEM: "bg-gray-50 border-gray-200",
-  };
 
   return (
     <div className="mt-6 rounded-2xl bg-white p-6 shadow-sm">
@@ -42,24 +42,56 @@ export function IssueCommentThread({
       {comments.length === 0 ? (
         <p className="mt-4 text-sm text-gray-500">No updates yet.</p>
       ) : (
-        <ul className="mt-4 space-y-4">
-          {comments.map((comment) => (
-            <li
-              key={comment.id}
-              className={`rounded-xl border p-4 text-sm ${directionStyles[comment.direction] ?? "bg-white border-gray-200"}`}
-            >
-              <div className="flex items-center justify-between">
-                <span className="font-semibold capitalize text-navy">
-                  {comment.direction.toLowerCase()}
-                  {comment.isInternal && <span className="ml-1 text-xs font-normal text-amber-600">(internal)</span>}
-                  {comment.user && ` — ${comment.user.name}`}
-                  {comment.emailFrom && ` — ${comment.emailFrom}`}
-                </span>
-                <span className="text-gray-500">{new Date(comment.createdAt).toLocaleString()}</span>
-              </div>
-              <p className="mt-2 whitespace-pre-line text-navy">{comment.content}</p>
-            </li>
-          ))}
+        <ul className="mt-4 space-y-2 rounded-2xl bg-gray-50 p-3 sm:p-4">
+          {comments.map((comment) => {
+            const when = new Date(comment.createdAt).toLocaleString([], {
+              month: "short",
+              day: "numeric",
+              hour: "numeric",
+              minute: "2-digit",
+            });
+
+            if (comment.direction === "SYSTEM") {
+              return (
+                <li key={comment.id} className="px-2 py-1 text-center text-xs text-gray-500">
+                  {comment.content} &middot; {when}
+                </li>
+              );
+            }
+
+            if (comment.direction === "BUILDER") {
+              return (
+                <li key={comment.id} className="mr-6 rounded-lg bg-white p-3 text-sm shadow-sm sm:mr-12">
+                  <p className="flex justify-between gap-3 text-xs font-semibold text-gray-500">
+                    <span title={comment.emailFrom ?? undefined}>
+                      {builderSenderLabel(comment.emailFrom, builderName)}
+                    </span>
+                    <span className="font-normal">{when}</span>
+                  </p>
+                  <p className="mt-1 whitespace-pre-line text-navy">{comment.content}</p>
+                </li>
+              );
+            }
+
+            const author = !comment.user || comment.user.id === currentUserId ? "You" : comment.user.name;
+            return (
+              <li
+                key={comment.id}
+                className={`ml-6 rounded-lg p-3 text-sm sm:ml-12 ${
+                  comment.isInternal ? "border border-dashed border-amber-300 bg-amber-50" : "bg-green/10"
+                }`}
+              >
+                <p className="flex justify-between gap-3 text-xs font-semibold">
+                  <span className={comment.isInternal ? "text-amber-700" : "text-green-600"}>
+                    {author}
+                    {comment.isInternal && <span className="font-normal"> &middot; internal note</span>}
+                  </span>
+                  <span className="font-normal text-gray-500">{when}</span>
+                </p>
+                <p className="mt-1 whitespace-pre-line text-navy">{comment.content}</p>
+              </li>
+            );
+          })}
         </ul>
       )}
 

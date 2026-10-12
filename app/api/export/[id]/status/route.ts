@@ -22,7 +22,8 @@ export async function GET(
   let downloadUrl = null;
   if (job.fileKey) {
     try {
-      downloadUrl = await getSignedDownloadUrl(job.fileKey, 7 * 24 * 60 * 60);
+      const folder = job.home.address.replace(/\W+/g, "_");
+      downloadUrl = await getSignedDownloadUrl(job.fileKey, 7 * 24 * 60 * 60, `${folder}.zip`);
     } catch {
       downloadUrl = null;
     }

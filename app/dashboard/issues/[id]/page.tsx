@@ -9,6 +9,15 @@ import { AppointmentForm } from "./AppointmentForm";
 import { RepairVerificationForm } from "./RepairVerificationForm";
 import { IssueCommentThread } from "./IssueCommentThread";
 import { formatAppointmentWhen } from "@/lib/date";
+import { formatShortDate, getIssueProgress } from "@/lib/issue-progress";
+import { CheckCircle2 } from "lucide-react";
+
+const statusBadgeStyles: Record<string, string> = {
+  OPEN: "bg-red-50 text-red-700",
+  SUBMITTED: "bg-blue-50 text-blue-700",
+  SCHEDULED: "bg-amber-50 text-amber-700",
+  RESOLVED: "bg-green-50 text-green-700",
+};
 
 export default async function IssueDetailPage({
   params,
@@ -33,15 +42,27 @@ export default async function IssueDetailPage({
       home: true,
       documents: { orderBy: { uploadedAt: "asc" } },
       warrantyRequests: { orderBy: { generatedAt: "desc" } },
-      statusHistory: true,
+      statusHistory: { orderBy: { createdAt: "asc" } },
       submissionRecords: true,
       appointments: { orderBy: { createdAt: "desc" } },
       repairVerifications: true,
-      comments: { orderBy: { createdAt: "asc" }, include: { user: { select: { name: true } } } },
+      comments: { orderBy: { createdAt: "asc" }, include: { user: { select: { id: true, name: true } } } },
     },
   });
 
   if (!issue) notFound();
+
+  const progress = getIssueProgress(issue);
+  const categoryLabel = issue.category
+    .toLowerCase()
+    .split("_")
+    .map((w) => w[0].toUpperCase() + w.slice(1))
+    .join(" / ");
+  const chips = [
+    categoryLabel,
+    issue.location,
+    issue.dateNoticed ? `Noticed ${formatShortDate(issue.dateNoticed, "UTC")}` : `Reported ${formatShortDate(issue.createdAt)}`,
+  ].filter(Boolean) as string[];
 
   const approvedRequest = issue.warrantyRequests.find((r) => r.status === "APPROVED" || r.status === "SENT");
 
@@ -65,17 +86,22 @@ export default async function IssueDetailPage({
         </Link>
 
         <div className="mt-4 rounded-2xl bg-white p-6 shadow-sm">
-          <div className="flex items-start justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-navy">{issue.title}</h1>
-              <p className="mt-1 text-sm text-gray-500">
-                {issue.location} &bull; {issue.category.replace("_", " / ")} &bull;{" "}
-                {issue.createdAt.toLocaleDateString()}
-              </p>
-            </div>
-            <span className="rounded-full bg-gray-100 px-3 py-1 text-sm font-medium capitalize text-navy">
+          <div className="flex items-start justify-between gap-3">
+            <h1 className="text-2xl font-bold text-navy">{issue.title}</h1>
+            <span
+              className={`shrink-0 rounded-full px-3 py-1 text-sm font-medium capitalize ${
+                statusBadgeStyles[issue.status] ?? "bg-gray-100 text-navy"
+              }`}
+            >
               {issue.status.toLowerCase()}
             </span>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2 text-xs text-navy">
+            {chips.map((chip) => (
+              <span key={chip} className="rounded-full bg-gray-100 px-3 py-1">
+                {chip}
+              </span>
+            ))}
           </div>
 
           {issue.description && (
@@ -88,7 +114,7 @@ export default async function IssueDetailPage({
           {photosWithUrls.length > 0 && (
             <div className="mt-6">
               <h2 className="text-sm font-semibold text-gray-500">Photos</h2>
-              <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3">
+              <div className="mt-2 grid grid-cols-3 gap-3 sm:grid-cols-4">
                 {photosWithUrls.map((photo) =>
                   photo.url ? (
                     <a
@@ -133,21 +159,43 @@ export default async function IssueDetailPage({
               href={`/dashboard/issues/${issue.id}/request`}
               className="rounded-full bg-green px-6 py-3 font-semibold text-white hover:bg-green-600"
             >
-              Generate Request
+              {approvedRequest?.status === "SENT" ? "View sent request" : "Generate Request"}
             </Link>
           </div>
         </div>
 
         <div className="mt-6 rounded-2xl bg-white p-6 shadow-sm">
-          <h2 className="font-semibold text-navy">Status History</h2>
-          <ul className="mt-4 space-y-3">
-            {issue.statusHistory.map((record) => (
-              <li key={record.id} className="flex items-center justify-between text-sm">
-                <span className="font-medium capitalize text-navy">{record.status.toLowerCase()}</span>
-                <span className="text-gray-500">{record.createdAt.toLocaleString()}</span>
+          <h2 className="font-semibold text-navy">Progress</h2>
+          <ol className="mt-4 space-y-2 text-sm">
+            {progress.map((step) => (
+              <li
+                key={step.label}
+                className="flex items-center justify-between gap-3 rounded-xl bg-gray-50 p-3"
+              >
+                <span className="flex items-center gap-2 font-medium text-navy">
+                  <CheckCircle2 className={`h-4 w-4 shrink-0 ${step.done ? "text-green" : "text-gray-300"}`} />
+                  {step.label}
+                </span>
+                <span className={`text-right text-xs ${step.done ? "text-green-600" : "text-gray-400"}`}>{step.when}</span>
               </li>
             ))}
-          </ul>
+          </ol>
+          {issue.statusHistory.length > 0 && (
+            <details className="mt-4">
+              <summary className="cursor-pointer text-sm font-medium text-gray-600">Full status history</summary>
+              <ul className="mt-3 space-y-2">
+                {issue.statusHistory.map((record) => (
+                  <li key={record.id} className="flex items-center justify-between gap-3 text-sm">
+                    <span className="capitalize text-navy">
+                      {record.status.toLowerCase()}
+                      {record.note && <span className="normal-case text-gray-500"> &middot; {record.note}</span>}
+                    </span>
+                    <span className="shrink-0 text-gray-500">{record.createdAt.toLocaleString()}</span>
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
         </div>
 
         {issue.submissionRecords.length > 0 && (
@@ -171,7 +219,12 @@ export default async function IssueDetailPage({
           </div>
         )}
 
-        <IssueCommentThread issueId={issue.id} comments={issue.comments} />
+        <IssueCommentThread
+          issueId={issue.id}
+          comments={issue.comments}
+          builderName={issue.home.builderName}
+          currentUserId={session.user.id}
+        />
 
         <SubmissionForm issueId={issue.id} warrantyRequestId={approvedRequest?.id ?? null} />
 

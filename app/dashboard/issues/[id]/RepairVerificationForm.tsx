@@ -16,8 +16,12 @@ export function RepairVerificationForm({ issueId }: { issueId: string }) {
   const [state, action, pending] = useActionState(createRepairVerification, null);
 
   return (
-    <form action={action} className="mt-6 rounded-2xl bg-white p-6 shadow-sm">
-      <h2 className="font-semibold text-navy">Verify the repair</h2>
+    <details className="group mt-6 rounded-2xl bg-white p-6 shadow-sm">
+      <summary className="cursor-pointer list-none font-semibold text-green group-open:mb-2 group-open:text-navy">
+        <span className="group-open:hidden">Repair done? Mark it verified</span>
+        <span className="hidden group-open:inline">Verify the repair</span>
+      </summary>
+      <form action={action}>
       <p className="mt-1 text-sm text-gray-600">Only you can mark this issue fully resolved.</p>
       <input type="hidden" name="issueId" value={issueId} />
 
@@ -63,5 +67,6 @@ export function RepairVerificationForm({ issueId }: { issueId: string }) {
         {pending ? "Saving..." : "Submit verification"}
       </button>
     </form>
+    </details>
   );
 }

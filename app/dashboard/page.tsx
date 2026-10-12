@@ -5,6 +5,22 @@ import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { daysSince } from "@/lib/date";
 import { formatCoverageDate, formatTerm, getCoverageWindows } from "@/lib/warranty-windows";
+import { getSignedDownloadUrl } from "@/lib/storage";
+import { builderSenderLabel } from "@/lib/issue-progress";
+
+const statusBadgeStyles: Record<string, string> = {
+  OPEN: "bg-red-50 text-red-700",
+  SUBMITTED: "bg-blue-50 text-blue-700",
+  SCHEDULED: "bg-amber-50 text-amber-700",
+  RESOLVED: "bg-green-50 text-green-700",
+};
+
+const statusDetail: Record<string, string> = {
+  OPEN: "Not sent yet",
+  SUBMITTED: "Waiting on builder",
+  SCHEDULED: "Repair scheduled",
+  RESOLVED: "Resolved",
+};
 
 const entitlementBlockedMessage = (
   <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-amber-900">
@@ -33,8 +49,41 @@ export default async function DashboardPage() {
         { memberships: { some: { userId: session.user.id } } },
       ],
     },
-    include: { issues: true, entitlements: true },
+    include: {
+      issues: {
+        where: { isDeleted: false },
+        orderBy: { updatedAt: "desc" },
+        include: {
+          documents: {
+            where: { type: "ISSUE_PHOTO", status: "ACTIVE" },
+            orderBy: { uploadedAt: "asc" },
+            take: 1,
+          },
+          comments: {
+            where: { direction: "BUILDER" },
+            orderBy: { createdAt: "desc" },
+            take: 1,
+          },
+        },
+      },
+      entitlements: true,
+    },
   });
+
+  const recentIssues = await Promise.all(
+    (home?.issues ?? []).slice(0, 5).map(async (issue) => {
+      const photo = issue.documents[0];
+      let photoUrl: string | null = null;
+      if (photo) {
+        try {
+          photoUrl = await getSignedDownloadUrl(photo.fileKey);
+        } catch {
+          photoUrl = null;
+        }
+      }
+      return { ...issue, photoUrl, latestReply: issue.comments[0] ?? null };
+    })
+  );
 
   const counts = {
     OPEN: 0,
@@ -80,8 +129,10 @@ export default async function DashboardPage() {
           </>
         ) : (
           <>
-            <div className="mt-2 flex items-center gap-3">
-              <p className="text-gray-600">{home.address}</p>
+            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+              <p className="text-gray-600">
+                {home.address} &bull; Closed {daysSinceClosing} {daysSinceClosing === 1 ? "day" : "days"} ago
+              </p>
               <Link
                 href="/dashboard/home"
                 className="text-sm text-green hover:underline"
@@ -89,22 +140,78 @@ export default async function DashboardPage() {
                 Manage home details
               </Link>
             </div>
-            <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-4">
               {(["OPEN", "SUBMITTED", "SCHEDULED", "RESOLVED"] as const).map(
                 (status) => (
                   <Link
                     key={status}
                     href={`/dashboard/issues?status=${status.toLowerCase()}`}
-                    className="rounded-2xl bg-white p-6 shadow-sm transition hover:shadow-md"
+                    className="rounded-2xl bg-white p-4 shadow-sm transition hover:shadow-md sm:p-6"
                   >
                     <p className="text-sm text-gray-500 capitalize">{status.toLowerCase()}</p>
-                    <p className="mt-2 text-3xl font-bold text-navy">
+                    <p className="mt-1 text-2xl font-bold text-navy sm:mt-2 sm:text-3xl">
                       {counts[status]}
                     </p>
                   </Link>
                 )
               )}
             </div>
+
+            {recentIssues.length > 0 && (
+              <div className="mt-8 rounded-2xl bg-white p-6 shadow-sm">
+                <div className="flex items-baseline justify-between gap-3">
+                  <h2 className="text-xl font-semibold text-navy">Your issues</h2>
+                  <Link href="/dashboard/issues" className="text-sm text-green hover:underline">
+                    View all
+                  </Link>
+                </div>
+                <ul className="mt-4 space-y-3">
+                  {recentIssues.map((issue) => (
+                    <li key={issue.id}>
+                      <Link
+                        href={`/dashboard/issues/${issue.id}`}
+                        className="block rounded-xl bg-gray-50 p-3 transition hover:bg-gray-100"
+                      >
+                        <div className="flex items-center gap-3">
+                          {issue.photoUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element -- short-lived signed R2 URL
+                            <img
+                              src={issue.photoUrl}
+                              alt=""
+                              className="h-12 w-12 shrink-0 rounded-lg bg-gray-200 object-cover"
+                            />
+                          ) : (
+                            <div className="h-12 w-12 shrink-0 rounded-lg bg-gray-200" />
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <p className="line-clamp-2 font-semibold text-navy">{issue.title}</p>
+                            <p className="line-clamp-2 text-sm text-gray-500">
+                              {issue.location || issue.category.charAt(0) + issue.category.slice(1).toLowerCase().replace("_", " / ")}
+                              {" "}&bull; {statusDetail[issue.status] ?? issue.status.toLowerCase()}
+                            </p>
+                          </div>
+                          <span
+                            className={`shrink-0 rounded-full px-2 py-1 text-xs font-medium capitalize ${
+                              statusBadgeStyles[issue.status] ?? "bg-gray-100 text-gray-700"
+                            }`}
+                          >
+                            {issue.status.toLowerCase()}
+                          </span>
+                        </div>
+                        {issue.latestReply && issue.status !== "RESOLVED" && (
+                          <div className="mt-3 rounded-lg bg-white p-3 text-sm text-navy">
+                            <p className="text-xs font-semibold text-gray-500">
+                              {builderSenderLabel(issue.latestReply.emailFrom, home.builderName)} replied
+                            </p>
+                            <p className="line-clamp-2">{issue.latestReply.content}</p>
+                          </div>
+                        )}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             <div className="mt-8 grid gap-6 lg:grid-cols-3">
               <div className="rounded-2xl bg-white p-6 shadow-sm lg:col-span-2">

@@ -16,10 +16,12 @@ export function RequestActions({
   issueId,
   home,
   initialRequest,
+  photoCount,
 }: {
   issueId: string;
   home: { builderName: string; builderEmail: string | null };
   initialRequest?: RequestPreview | null;
+  photoCount: number;
 }) {
   const [genState, genAction, genPending] = useActionState(generateWarrantyRequest, null);
   const [approveState, approveAction, approvePending] = useActionState(approveRequest, null);
@@ -59,22 +61,36 @@ export function RequestActions({
         </form>
       ) : (
         <div className="mt-6 rounded-2xl bg-white p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <h2 className="font-semibold text-navy">Preview</h2>
-            {request.status === "SENT" && (
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Warranty request</p>
+            {sent && (
               <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
                 Sent to builder
               </span>
             )}
           </div>
-          <pre className="mt-4 max-h-96 overflow-auto whitespace-pre-wrap rounded-lg bg-gray-50 p-4 text-sm text-navy">
+          <div className="mt-3 max-h-96 overflow-auto whitespace-pre-line rounded-lg bg-gray-50 p-4 text-sm leading-6 text-navy">
             {request.generatedContent}
-          </pre>
+          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-gray-500">
+            <a
+              href={`/api/reports/request/${request.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded bg-gray-100 px-2 py-1 hover:bg-gray-200"
+            >
+              request.pdf
+            </a>
+            <span className="rounded bg-gray-100 px-2 py-1">
+              {photoCount === 1 ? "1 photo" : `${photoCount} photos`}
+            </span>
+            <span>{sent ? "were attached to the email" : "will be attached to the email"}</span>
+          </div>
 
           {sent ? (
             <div className="mt-6 space-y-3">
               <p className="text-sm text-gray-600">
-                The request has been sent to the builder. Any reply will go to your email and can be logged in the issue thread.
+                Sent. When your builder replies, it shows up in this issue&apos;s communication log and is emailed to you.
               </p>
               <Link
                 href={`/dashboard/issues/${issueId}`}

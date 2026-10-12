@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import JSZip from "jszip";
+import { createElement } from "react";
+import type { ReactElement } from "react";
+import { renderToBuffer, DocumentProps } from "@react-pdf/renderer";
+import { WarrantyRequestPDF } from "@/lib/pdf/warranty-request";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { uploadBuffer, downloadFile, getSignedDownloadUrl } from "@/lib/storage";
 import { hasActiveEntitlement } from "@/lib/entitlements";
+
+const WARRANTY_DOC_TYPES = new Set<string>(["BUILDER_WARRANTY", "THIRD_PARTY_WARRANTY", "WORKMANSHIP_STANDARDS"]);
 
 export async function POST(request: NextRequest) {
   const session = await auth.api.getSession({ headers: request.headers });
@@ -62,26 +68,65 @@ export async function POST(request: NextRequest) {
     const folder = home.address.replace(/\W+/g, "_");
     zip.file(`${folder}/home.json`, JSON.stringify(home, null, 2));
 
-    for (const issue of home.issues) {
-      if (issue.comments.length === 0) continue;
-      const log = issue.comments
-        .map((c) => {
-          const who = c.direction === "BUILDER" ? c.emailFrom || "Builder" : c.direction === "SYSTEM" ? "System" : "Homeowner";
-          const flag = c.isInternal ? " (internal note)" : "";
-          return `[${c.createdAt.toISOString()}] ${who}${flag}:\n${c.content}\n`;
-        })
-        .join("\n");
-      zip.file(`${folder}/communications/${issue.title.replace(/\W+/g, "_")}_${issue.id}.txt`, log);
+    const fileName = (key: string) => key.split("/").pop() ?? key;
+    const addFile = async (path: string, key: string) => {
+      try {
+        zip.file(path, await downloadFile(key));
+      } catch (err) {
+        console.error(`[export] failed to download ${key}`, err);
+      }
+    };
+
+    for (const doc of home.documents.filter((d) => !d.issueId)) {
+      const sub = WARRANTY_DOC_TYPES.has(doc.type) ? "warranty-documents" : `documents/${doc.type}`;
+      await addFile(`${folder}/${sub}/${fileName(doc.fileKey)}`, doc.fileKey);
     }
 
-    const allDocuments = [...home.documents, ...home.issues.flatMap((i) => i.documents)];
-    for (const doc of allDocuments) {
-      try {
-        const buffer = await downloadFile(doc.fileKey);
-        const fileName = doc.fileKey.split("/").pop() ?? doc.fileKey;
-        zip.file(`${home.address.replace(/\W+/g, "_")}/documents/${doc.type}/${fileName}`, buffer);
-      } catch (err) {
-        console.error(`[export] failed to download ${doc.fileKey}`, err);
+    const usedNames = new Set<string>();
+    for (const issue of home.issues) {
+      let name = issue.title.replace(/\W+/g, "_").replace(/^_+|_+$/g, "") || "Issue";
+      if (usedNames.has(name)) name = `${name}_${issue.id.slice(-6)}`;
+      usedNames.add(name);
+
+      for (const doc of issue.documents) {
+        const sub = doc.type === "ISSUE_PHOTO" ? "photos" : `documents/${doc.type}`;
+        await addFile(`${folder}/issues/${name}/${sub}/${fileName(doc.fileKey)}`, doc.fileKey);
+      }
+
+      if (issue.comments.length > 0) {
+        const log = issue.comments
+          .map((c) => {
+            const who = c.direction === "BUILDER" ? c.emailFrom || "Builder" : c.direction === "SYSTEM" ? "System" : "Homeowner";
+            const flag = c.isInternal ? " (internal note)" : "";
+            return `[${c.createdAt.toISOString()}] ${who}${flag}:\n${c.content}\n`;
+          })
+          .join("\n");
+        zip.file(`${folder}/communications/${name}.txt`, log);
+      }
+
+      const requests = [...issue.warrantyRequests].sort((a, b) => a.generatedAt.getTime() - b.generatedAt.getTime());
+      for (const [i, req] of requests.entries()) {
+        try {
+          const pdf = await renderToBuffer(
+            createElement(WarrantyRequestPDF, {
+              request: {
+                generatedContent: req.generatedContent,
+                requestedNextStep: req.requestedNextStep,
+                home: { address: home.address, builderName: home.builderName },
+                issue: {
+                  title: issue.title,
+                  location: issue.location,
+                  dateNoticed: issue.dateNoticed,
+                  description: issue.description,
+                },
+              },
+            }) as unknown as ReactElement<DocumentProps>
+          );
+          const suffix = requests.length > 1 ? `_${i + 1}` : "";
+          zip.file(`${folder}/requests/${name}${suffix}.pdf`, pdf);
+        } catch (err) {
+          console.error(`[export] failed to render request ${req.id}`, err);
+        }
       }
     }
 
@@ -89,7 +134,7 @@ export async function POST(request: NextRequest) {
     const key = `exports/${home.id}/${job.id}.zip`;
     await uploadBuffer(key, zipBuffer, "application/zip");
 
-    const downloadUrl = await getSignedDownloadUrl(key, 7 * 24 * 60 * 60);
+    const downloadUrl = await getSignedDownloadUrl(key, 7 * 24 * 60 * 60, `${folder}.zip`);
 
     await prisma.exportJob.update({
       where: { id: job.id },

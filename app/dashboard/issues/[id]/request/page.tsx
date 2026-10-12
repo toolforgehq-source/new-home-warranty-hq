@@ -27,6 +27,7 @@ export default async function RequestPage({
     include: {
       home: { select: { builderName: true, builderEmail: true } },
       warrantyRequests: { orderBy: { generatedAt: "desc" }, take: 1 },
+      _count: { select: { documents: { where: { type: "ISSUE_PHOTO", status: "ACTIVE" } } } },
     },
   });
 
@@ -49,6 +50,7 @@ export default async function RequestPage({
           issueId={id}
           home={issue.home}
           initialRequest={latestRequest}
+          photoCount={issue._count.documents}
         />
       </div>
     </main>
