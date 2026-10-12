@@ -3,6 +3,9 @@ import { ContactForm } from "@/components/marketing/ContactForm";
 
 export const metadata = {
   title: "Contact — New Home Warranty HQ",
+  description:
+    "Contact New Home Warranty HQ with questions about your account, builder warranty requests, partner gifts, or refunds.",
+  alternates: { canonical: "/contact" },
 };
 
 export default function ContactPage() {

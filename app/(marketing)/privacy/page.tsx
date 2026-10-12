@@ -3,6 +3,9 @@ import { LegalSection, LegalList } from "@/components/marketing/LegalSection";
 
 export const metadata = {
   title: "Privacy Policy — New Home Warranty HQ",
+  description:
+    "How New Home Warranty HQ collects, uses, and protects your home, warranty, and account information.",
+  alternates: { canonical: "/privacy" },
 };
 
 export default function PrivacyPage() {

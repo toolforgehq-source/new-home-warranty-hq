@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { GiftFrom } from "@/components/GiftFrom";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { daysSince } from "@/lib/date";
@@ -67,6 +68,11 @@ export default async function DashboardPage() {
         },
       },
       entitlements: true,
+      giftPurchase: {
+        select: {
+          partner: { select: { name: true, partnerProfile: { select: { company: true, logoUrl: true } } } },
+        },
+      },
     },
   });
 
@@ -140,6 +146,15 @@ export default async function DashboardPage() {
                 Manage home details
               </Link>
             </div>
+            {home.giftPurchase && (
+              <GiftFrom
+                compact
+                name={home.giftPurchase.partner.name}
+                company={home.giftPurchase.partner.partnerProfile?.company}
+                logoUrl={home.giftPurchase.partner.partnerProfile?.logoUrl}
+                className="mt-3"
+              />
+            )}
             <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-4">
               {(["OPEN", "SUBMITTED", "SCHEDULED", "RESOLVED"] as const).map(
                 (status) => (

@@ -5,6 +5,7 @@ import { stripe, APP_URL } from "@/lib/stripe";
 import prisma from "@/lib/prisma";
 import { sendHomeownerOnboardingLink, sendPurchaseReceipt } from "@/lib/emails/purchase";
 import { sendGiftInvitation } from "@/lib/emails/gift";
+import { trackEvent } from "@/lib/analytics";
 import { revokeEntitlementsAndInvalidateUnredeemedTokensForPurchase } from "@/lib/entitlements";
 
 export async function POST(request: NextRequest) {
@@ -71,6 +72,18 @@ export async function POST(request: NextRequest) {
           });
         });
 
+        await trackEvent({
+          event: "purchase_completed",
+          userId: purchase.userId ?? undefined,
+          anonymousId: session.metadata?.anonymousId,
+          properties: {
+            productType: "HOMEOWNER",
+            purchaseId: purchase.id,
+            amount: purchase.amount,
+            source: session.metadata?.source ?? "unknown",
+          },
+        });
+
         try {
           await sendHomeownerOnboardingLink({
             to: email,
@@ -100,7 +113,7 @@ export async function POST(request: NextRequest) {
 
         const giftPurchase = await prisma.giftPurchase.findUnique({
           where: { id: giftPurchaseId },
-          include: { purchase: true, partner: true },
+          include: { purchase: true, partner: { include: { partnerProfile: true } } },
         });
 
         if (!giftPurchase || giftPurchase.status !== "PENDING") {
@@ -133,11 +146,24 @@ export async function POST(request: NextRequest) {
           });
         });
 
+        await trackEvent({
+          event: "purchase_completed",
+          userId: giftPurchase.partnerId,
+          anonymousId: session.metadata?.anonymousId,
+          properties: {
+            productType: "GIFT",
+            purchaseId: giftPurchase.purchaseId,
+            amount: giftPurchase.purchase.amount,
+            source: session.metadata?.source ?? "unknown",
+          },
+        });
+
         try {
           await sendGiftInvitation({
             to: giftPurchase.recipientEmail,
             buyerName: giftPurchase.partner.name,
-            buyerCompany: null,
+            buyerCompany: giftPurchase.partner.partnerProfile?.company ?? null,
+            giftMessage: giftPurchase.giftMessage,
             redemptionUrl: `${APP_URL}/onboarding?token=${onboardingToken.token}`,
           });
         } catch (err) {

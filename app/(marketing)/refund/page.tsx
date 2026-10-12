@@ -3,6 +3,9 @@ import { LegalSection, LegalList } from "@/components/marketing/LegalSection";
 
 export const metadata = {
   title: "Refund & Satisfaction Guarantee — New Home Warranty HQ",
+  description:
+    "New Home Warranty HQ's 30-day refund and satisfaction guarantee for homeowner purchases and partner gifts.",
+  alternates: { canonical: "/refund" },
 };
 
 export default function RefundPage() {
