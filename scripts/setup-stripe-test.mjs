@@ -36,6 +36,7 @@ async function setupWebhook(webhookUrl) {
     url: webhookUrl,
     enabled_events: [
       "checkout.session.completed",
+      "checkout.session.expired",
       "payment_intent.payment_failed",
       "charge.refunded",
     ],

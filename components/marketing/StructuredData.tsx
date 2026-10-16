@@ -1,4 +1,5 @@
 import { SITE_NAME, SITE_URL } from "@/lib/site";
+import { FAQS } from "@/lib/faq-data";
 
 const data = [
   {
@@ -17,6 +18,15 @@ const data = [
     description:
       "A homeowner-controlled system for documenting new-home defects, sending builder warranty requests, and tracking replies, appointments, and repairs.",
     offers: { "@type": "Offer", price: "189.00", priceCurrency: "USD" },
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: FAQS.map((f) => ({
+      "@type": "Question",
+      name: f.q,
+      acceptedAnswer: { "@type": "Answer", text: f.a },
+    })),
   },
 ];
 

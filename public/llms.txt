@@ -1,0 +1,36 @@
+# New Home Warranty HQ
+
+> Homeowner-controlled software for documenting new-home builder-warranty issues, sending the requests you approve to your builder, tracking replies, appointments and repairs, and getting reminders before your confirmed coverage windows end. It is not a home warranty, insurance policy, insurer, or law firm.
+
+Site: https://newhomewarrantyhq.com/
+Pricing: $189 one-time for homeowners (no subscription; 30-day satisfaction guarantee). Partner gift price: $124 one-time, bought by realtors, lenders, title companies, inspectors and other approved partners for their new-construction clients.
+
+## What it does
+
+- Document defects with photos and notes during the builder warranty period
+- Draft warranty requests that you write or approve; the app emails them to your builder and logs the builder's replies in your dashboard
+- Track status, appointments and repairs until items are fixed
+- Reminders 60 and 14 days before each coverage window you confirm ends
+- Partner gifts: a partner can buy the product at $124 for a client, who receives an email to set up their own account
+
+## Important distinctions
+
+- A builder warranty (the builder's workmanship, systems and structural coverage) is different from a "home warranty" service contract sold by insurers
+- New Home Warranty HQ does not provide warranty coverage, pay for repairs, or decide whether an issue is covered; that is decided by the builder or warranty provider
+- It does not give legal advice
+- Partners who gift the product cannot see the homeowner's issues
+
+## Key pages
+
+- Home: https://newhomewarrantyhq.com/
+- Partners: https://newhomewarrantyhq.com/partners
+- Partner register: https://newhomewarrantyhq.com/partner/register
+- About: https://newhomewarrantyhq.com/about
+- Contact: https://newhomewarrantyhq.com/contact
+- Refund policy: https://newhomewarrantyhq.com/refund
+- Privacy: https://newhomewarrantyhq.com/privacy
+- Terms: https://newhomewarrantyhq.com/terms
+
+## Optional
+
+- Login, dashboard, onboarding and checkout paths are private or transactional and are not meant for indexing
