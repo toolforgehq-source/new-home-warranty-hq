@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { classifySource, summarizeFunnel } from "@/lib/funnel";
 import { giftInvitationContent } from "@/lib/emails/gift";
 import robots from "@/app/robots";
-import sitemap from "@/app/sitemap";
+import { staticSitemap as sitemap } from "@/app/sitemap";
 
 describe("classifySource", () => {
   it("prefers utm_source over the referrer", () => {

@@ -4,7 +4,17 @@ import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { trackEvent } from "@/lib/analytics";
 import { SOURCE_COOKIE, VISITOR_COOKIE } from "@/lib/funnel";
-import { isStripeConfigured, stripe, STRIPE_PRICE_HOMEOWNER, STRIPE_PRICE_GIFT } from "@/lib/stripe";
+import { z } from "zod";
+import { isStripeConfigured, stripe, STRIPE_PRICE_HOMEOWNER, STRIPE_PRICE_GIFT, checkStripeModeConsistency } from "@/lib/stripe";
+import { rateLimit } from "@/lib/rate-limit";
+
+const checkoutSchema = z.object({
+  product: z.enum(["homeowner", "gift"]),
+  recipientName: z.string().trim().min(1).max(200).optional(),
+  recipientEmail: z.string().trim().email().max(320).optional(),
+  propertyAddress: z.string().trim().max(500).optional(),
+  giftMessage: z.string().trim().max(2000).optional(),
+});
 
 export async function POST(request: NextRequest) {
   const origin = request.nextUrl.origin;
@@ -12,17 +22,29 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Stripe is not configured" }, { status: 503 });
   }
 
-  const body = (await request.json()) as {
-    product: "homeowner" | "gift";
-    recipientName?: string;
-    recipientEmail?: string;
-    propertyAddress?: string;
-    giftMessage?: string;
-  };
+  checkStripeModeConsistency();
 
-  if (!body.product || !["homeowner", "gift"].includes(body.product)) {
-    return NextResponse.json({ error: "Invalid product" }, { status: 400 });
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const { ok } = await rateLimit("checkout", ip, 10, 60);
+  if (!ok) {
+    return NextResponse.json({ error: "Too many requests. Please try again in a minute." }, { status: 429 });
   }
+
+  let raw: unknown;
+  try {
+    raw = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+  }
+  const parsed = checkoutSchema.safeParse(raw);
+  if (!parsed.success) {
+    const field = parsed.error.issues[0]?.path[0];
+    return NextResponse.json(
+      { error: field === "product" || field === undefined ? "Invalid product" : `Invalid ${String(field)}` },
+      { status: 400 }
+    );
+  }
+  const body = parsed.data;
 
   const session = await auth.api.getSession({ headers: await headers() });
   const anonymousId = request.cookies.get(VISITOR_COOKIE)?.value;

@@ -911,3 +911,14 @@ model ConnectedEmailAccount {
   @@index([userId])
   @@map("connected_email_account")
 }
+
+// ---------- Stripe webhook idempotency ----------
+// One row per Stripe event id we have started processing. The primary key makes
+// a concurrent or repeated delivery of the same event a no-op.
+model StripeEvent {
+  id        String   @id // Stripe event id (evt_...)
+  type      String
+  createdAt DateTime @default(now())
+
+  @@map("stripe_event")
+}
