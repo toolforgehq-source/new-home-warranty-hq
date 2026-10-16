@@ -22,9 +22,25 @@ export default function TermsPage() {
         <p>
           New Home Warranty HQ is a software tool that helps homeowners
           document, organize, and track new-home warranty issues. We do not
-          provide warranty coverage, home warranty insurance, or legal services.
-          We do not communicate with your builder on your behalf unless you
-          choose to use your own email or copy information from the Service.
+          provide warranty coverage, home warranty insurance, repairs, or legal
+          services, and we do not decide whether any issue is covered by your
+          builder&apos;s warranty.
+        </p>
+        <p>
+          When you choose to send a warranty request to your builder, the
+          Service emails it to the builder address you provide, on your behalf
+          and at your direction. The message is sent from an address operated by
+          the Service, copies you, and uses a reply address that routes the
+          builder&apos;s replies back into your account so they are recorded with
+          your issue. We send a request only after you write or approve it, and
+          we do not contact your builder on our own initiative. Suggested
+          wording is a draft for you to edit. You are responsible for the
+          content of what you send, for the accuracy of the builder&apos;s contact
+          details, and for any deadlines under your builder&apos;s warranty. We do
+          not guarantee that your builder will receive, read, or respond to a
+          message, or that email will be delivered. If your builder requires its
+          own portal or form, you are responsible for submitting through it; the
+          Service can help you prepare the information and keep confirmation.
         </p>
       </LegalSection>
 
