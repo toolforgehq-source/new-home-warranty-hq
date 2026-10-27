@@ -107,6 +107,8 @@ describe("robots and sitemap", () => {
     const urls = sitemap().map((e) => e.url);
     expect(urls).toContain("https://newhomewarrantyhq.com");
     expect(urls).toContain("https://newhomewarrantyhq.com/partners");
+    expect(urls).toContain("https://newhomewarrantyhq.com/guides");
+    expect(urls).not.toContain("https://newhomewarrantyhq.com/partners/qa-test-company");
     expect(urls.every((u) => u.startsWith("https://newhomewarrantyhq.com"))).toBe(true);
     expect(urls.some((u) => /dashboard|admin|checkout|onboarding/.test(u))).toBe(false);
   });

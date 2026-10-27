@@ -1,4 +1,6 @@
 import type { MetadataRoute } from "next";
+import { getGuides } from "@/lib/guides";
+import { isTestPartnerSlug } from "@/lib/partner-slugs";
 import { SITE_URL } from "@/lib/site";
 import prisma from "@/lib/prisma";
 
@@ -17,7 +19,16 @@ const PAGES: { path: string; priority: number; changeFrequency: "weekly" | "mont
 export const revalidate = 3600;
 
 export function staticSitemap(): MetadataRoute.Sitemap {
-  return PAGES.map((p) => ({
+  const pages = [
+    ...PAGES,
+    { path: "/guides", priority: 0.7, changeFrequency: "monthly" as const },
+    ...getGuides().map((guide) => ({
+      path: guide.path,
+      priority: 0.6,
+      changeFrequency: "monthly" as const,
+    })),
+  ];
+  return pages.map((p) => ({
     url: `${SITE_URL}${p.path}`,
     changeFrequency: p.changeFrequency,
     priority: p.priority,
@@ -32,6 +43,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       select: { slug: true, updatedAt: true },
     });
     for (const p of partners) {
+      // Keep QA profiles in the database, but do not advertise test pages.
+      if (isTestPartnerSlug(p.slug)) continue;
       entries.push({
         url: `${SITE_URL}/partners/${p.slug}`,
         lastModified: p.updatedAt,

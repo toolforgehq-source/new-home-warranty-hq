@@ -12,6 +12,7 @@ const nav = [
   { label: "Why It Matters", href: "/#why-it-matters" },
   { label: "Pricing", href: "/#pricing" },
   { label: "For Partners", href: "/partners" },
+  { label: "Guides", href: "/guides" },
   { label: "FAQ", href: "/#faq" },
 ];
 
@@ -25,7 +26,7 @@ export function Header() {
           <Logo className="h-7 w-auto text-white" />
         </Link>
 
-        <nav className="hidden items-center gap-8 lg:flex">
+        <nav className="hidden items-center gap-5 xl:gap-7 lg:flex">
           {nav.map((item) => (
             <SectionLink
               key={item.href}

@@ -31,6 +31,19 @@ Pricing: $189 one-time for homeowners (no subscription; 30-day satisfaction guar
 - Privacy: https://newhomewarrantyhq.com/privacy
 - Terms: https://newhomewarrantyhq.com/terms
 
+## Guides
+
+Informational pages for homeowners. Not legal advice. Your warranty document controls.
+
+- Guides: https://newhomewarrantyhq.com/guides
+- 11-month warranty inspection: https://newhomewarrantyhq.com/guides/11-month-warranty-inspection
+- Builder warranty vs home warranty: https://newhomewarrantyhq.com/guides/builder-warranty-vs-home-warranty
+- How long a builder warranty lasts: https://newhomewarrantyhq.com/guides/how-long-is-a-builder-warranty
+- When a builder is not fixing warranty items: https://newhomewarrantyhq.com/guides/builder-not-fixing-warranty-items
+- When a builder warranty is expiring: https://newhomewarrantyhq.com/guides/builder-warranty-expiring
+- 11-month inspection checklist: https://newhomewarrantyhq.com/guides/11-month-checklist
+- Builder warranty request letter templates: https://newhomewarrantyhq.com/guides/builder-warranty-letters
+
 ## Optional
 
 - Login, dashboard, onboarding and checkout paths are private or transactional and are not meant for indexing
