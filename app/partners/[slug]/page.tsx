@@ -1,8 +1,10 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { CheckCircle2, ShieldCheck, Lock, Gift } from "lucide-react";
 import prisma from "@/lib/prisma";
+import { isTestPartnerSlug } from "@/lib/partner-slugs";
 
 export async function generateMetadata({
   params,
@@ -12,10 +14,13 @@ export async function generateMetadata({
   const { slug } = await params;
   const profile = await prisma.partnerProfile.findUnique({ where: { slug }, include: { user: true } });
   const company = profile?.company || "Your partner";
-  return {
+  const metadata: Metadata = {
     title: `${company} recommends New Home Warranty HQ`,
     alternates: { canonical: `/partners/${slug}` },
   };
+  // Test profiles stay reachable. They are omitted from the sitemap and not indexed.
+  if (isTestPartnerSlug(slug)) metadata.robots = { index: false };
+  return metadata;
 }
 
 export default async function PartnerPublicPage({
